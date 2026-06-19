@@ -1,0 +1,791 @@
+import type { InvitePayload } from "@/lib/types";
+
+const now = new Date();
+
+export const MOCK_USER = {
+  id: "dev-user",
+  email: "maya@northwind.com",
+  name: "Maya Chen",
+  passwordHash: "",
+  createdAt: now,
+  updatedAt: now,
+  memberships: [
+    {
+      id: "dev-membership",
+      workspaceId: "dev-workspace",
+      userId: "dev-user",
+      role: "ADMIN" as const,
+      createdAt: now,
+      workspace: {
+        id: "dev-workspace",
+        name: "Northwind",
+        slug: "northwind",
+        careersUrl: "https://northwind.example/careers",
+        logoUrl: null,
+        accentColor: "#1C6B47",
+        createdAt: now,
+        updatedAt: now,
+      },
+    },
+  ],
+};
+
+export const MOCK_WORKSPACE_MEMBERS = [
+  {
+    id: "dev-membership",
+    workspaceId: "dev-workspace",
+    userId: "dev-user",
+    role: "ADMIN" as const,
+    createdAt: now,
+    user: { id: "dev-user", email: "maya@northwind.com", name: "Maya Chen", passwordHash: "", createdAt: now, updatedAt: now },
+    avatar: { initials: "MC", color: "#1C6B47" },
+    badge: "Admin",
+    note: "you",
+  },
+  {
+    id: "dev-membership-2",
+    workspaceId: "dev-workspace",
+    userId: "dev-user-2",
+    role: "RECRUITER" as const,
+    createdAt: now,
+    user: { id: "dev-user-2", email: "raj@northwind.com", name: "Raj Anand", passwordHash: "", createdAt: now, updatedAt: now },
+    avatar: { initials: "RA", color: "#7A766C" },
+    badge: "Recruiter",
+  },
+  {
+    id: "dev-membership-3",
+    workspaceId: "dev-workspace",
+    userId: "dev-user-3",
+    role: "RECRUITER" as const,
+    createdAt: now,
+    user: { id: "dev-user-3", email: "elif@northwind.com", name: "Elif Toprak", passwordHash: "", createdAt: now, updatedAt: now },
+    avatar: { initials: "ET", color: "#5E6B60" },
+    badge: "Recruiter",
+  },
+  {
+    id: "dev-membership-4",
+    workspaceId: "dev-workspace",
+    userId: "dev-user-4",
+    role: "VIEWER" as const,
+    createdAt: now,
+    user: { id: "dev-user-4", email: "jon@northwind.com", name: "Jon Liu", passwordHash: "", createdAt: now, updatedAt: now },
+    avatar: { initials: "JL", color: "#8A6F52" },
+    badge: "Viewer",
+    note: "pending",
+  },
+];
+
+const MOCK_QUESTIONS = [
+  { id: "q1", interviewId: "demo-interview", order: 0, text: "Tell us about a project you're proud of.", timeLimitSec: 120, retakes: 2, thinkTimeSec: 3 },
+  { id: "q2", interviewId: "demo-interview", order: 1, text: "How do you approach ambiguous problems?", timeLimitSec: 120, retakes: 2, thinkTimeSec: 3 },
+  { id: "q3", interviewId: "demo-interview", order: 2, text: "Describe a time you received tough feedback.", timeLimitSec: 120, retakes: 2, thinkTimeSec: 3 },
+  { id: "q4", interviewId: "demo-interview", order: 3, text: "What would your teammates say you do best?", timeLimitSec: 120, retakes: 2, thinkTimeSec: 3 },
+  { id: "q5", interviewId: "demo-interview", order: 4, text: "Why are you interested in this role?", timeLimitSec: 120, retakes: 2, thinkTimeSec: 3 },
+];
+
+export const MOCK_INTERVIEW = {
+  id: "demo-interview",
+  workspaceId: "dev-workspace",
+  ownerId: "dev-user",
+  title: "Product Designer",
+  status: "ACTIVE" as const,
+  welcomeMessage: "We loved your application — this is just a chance to hear how you think. Be yourself.",
+  deadlineDays: 7,
+  allowRetakes: true,
+  autoTranscripts: true,
+  requireIdCheck: false,
+  createdAt: new Date("2025-06-02"),
+  updatedAt: new Date("2025-06-02"),
+  publishedAt: now,
+  owner: { id: "dev-user", email: "maya@northwind.com", name: "Maya Chen", passwordHash: "", createdAt: now, updatedAt: now },
+  workspace: MOCK_USER.memberships[0]!.workspace,
+  questions: MOCK_QUESTIONS,
+};
+
+export const MOCK_DRAFT_INTERVIEW = {
+  ...MOCK_INTERVIEW,
+  id: "demo-draft",
+  title: "Engineering Manager",
+  status: "DRAFT" as const,
+  publishedAt: null,
+};
+
+export function mockDashboardStats() {
+  return {
+    newResponses: 12,
+    awaitingReview: 28,
+    completionRate: 86,
+    activeRoles: 4,
+    newSinceYesterday: 5,
+    completionDelta: 4,
+    closingThisWeek: 2,
+    responsesWaiting: 12,
+  };
+}
+
+export function mockReviewQueue() {
+  const feInterview = {
+    ...MOCK_INTERVIEW,
+    id: "demo-fe",
+    title: "Frontend Engineer",
+    questions: MOCK_QUESTIONS.slice(0, 4),
+  };
+
+  return [
+    {
+      id: "demo-response",
+      inviteId: "demo-invite",
+      stage: "TO_REVIEW" as const,
+      decision: null,
+      overallRating: null,
+      notes: null,
+      submittedAt: new Date(Date.now() - 2 * 3600000),
+      progressPhase: "done",
+      currentQuestionIndex: 4,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite",
+        interviewId: "demo-interview",
+        token: "demo-invite-token",
+        email: null,
+        candidateName: "Jordan Reyes",
+        status: "COMPLETED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: MOCK_INTERVIEW,
+      },
+      answers: MOCK_QUESTIONS.map((q) => ({
+        id: `a-${q.id}`,
+        responseId: "demo-response",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 90,
+        transcript: `[Auto transcript] Response to: ${q.text.slice(0, 50)}…`,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "New" as const,
+      avatar: { initials: "JR", color: "#1C6B47" },
+    },
+    {
+      id: "demo-response-2",
+      inviteId: "demo-invite-2",
+      stage: "TO_REVIEW" as const,
+      decision: null,
+      overallRating: null,
+      notes: null,
+      submittedAt: new Date(Date.now() - 4 * 3600000),
+      progressPhase: "done",
+      currentQuestionIndex: 4,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite-2",
+        interviewId: "demo-interview",
+        token: "demo-invite-2",
+        email: null,
+        candidateName: "Priya Nair",
+        status: "COMPLETED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: MOCK_INTERVIEW,
+      },
+      answers: MOCK_QUESTIONS.map((q) => ({
+        id: `a2-${q.id}`,
+        responseId: "demo-response-2",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 85,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "New" as const,
+      avatar: { initials: "PN", color: "#7A766C" },
+    },
+    {
+      id: "demo-response-3",
+      inviteId: "demo-invite-3",
+      stage: "TO_REVIEW" as const,
+      decision: null,
+      overallRating: null,
+      notes: null,
+      submittedAt: new Date(Date.now() - 6 * 3600000),
+      progressPhase: "recording",
+      currentQuestionIndex: 3,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite-3",
+        interviewId: "demo-fe",
+        token: "demo-invite-3",
+        email: null,
+        candidateName: "Sam Okafor",
+        status: "STARTED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: feInterview,
+      },
+      answers: MOCK_QUESTIONS.slice(0, 4).map((q) => ({
+        id: `a3-${q.id}`,
+        responseId: "demo-response-3",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 80,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "Started" as const,
+      avatar: { initials: "SO", color: "#6B7775" },
+    },
+    {
+      id: "demo-response-4",
+      inviteId: "demo-invite-4",
+      stage: "TO_REVIEW" as const,
+      decision: null,
+      overallRating: null,
+      notes: null,
+      submittedAt: new Date(Date.now() - 86400000),
+      progressPhase: "done",
+      currentQuestionIndex: 4,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite-4",
+        interviewId: "demo-interview",
+        token: "demo-invite-4",
+        email: null,
+        candidateName: "Lena Hofer",
+        status: "COMPLETED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: MOCK_INTERVIEW,
+      },
+      answers: MOCK_QUESTIONS.map((q) => ({
+        id: `a4-${q.id}`,
+        responseId: "demo-response-4",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 88,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "New" as const,
+      avatar: { initials: "LH", color: "#76746E" },
+    },
+  ];
+}
+
+export function mockActiveInterviews() {
+  return [
+    {
+      ...MOCK_INTERVIEW,
+      title: "Product Designer",
+      _count: { invites: 32 },
+      invites: Array.from({ length: 27 }, (_, i) => ({ id: `inv-${i}` })),
+      newCount: 8,
+    },
+    {
+      ...MOCK_INTERVIEW,
+      id: "demo-fe",
+      title: "Frontend Engineer",
+      questions: MOCK_QUESTIONS.slice(0, 4),
+      createdAt: new Date("2025-05-28"),
+      _count: { invites: 24 },
+      invites: Array.from({ length: 19 }, (_, i) => ({ id: `fe-${i}` })),
+      newCount: 3,
+    },
+    {
+      ...MOCK_INTERVIEW,
+      id: "demo-cs",
+      title: "Customer Success Lead",
+      createdAt: new Date("2025-05-20"),
+      _count: { invites: 15 },
+      invites: Array.from({ length: 11 }, (_, i) => ({ id: `cs-${i}` })),
+      newCount: 0,
+    },
+  ];
+}
+
+export function mockInterviewsList(status?: string) {
+  const maya = { id: "dev-user", email: "maya@northwind.com", name: "Maya Chen", passwordHash: "", createdAt: now, updatedAt: now };
+  const raj = { id: "dev-user-2", email: "raj@northwind.com", name: "Raj Anand", passwordHash: "", createdAt: now, updatedAt: now };
+  const elif = { id: "dev-user-3", email: "elif@northwind.com", name: "Elif Tan", passwordHash: "", createdAt: now, updatedAt: now };
+
+  const all = [
+    {
+      ...MOCK_INTERVIEW,
+      title: "Product Designer",
+      status: "ACTIVE" as const,
+      questions: MOCK_QUESTIONS,
+      owner: maya,
+      _count: { invites: 32 },
+      invites: Array.from({ length: 27 }, (_, i) => ({ id: `inv-${i}` })),
+      ownerMeta: { firstName: "Maya", initials: "MC", color: "#1C6B47" },
+    },
+    {
+      ...MOCK_INTERVIEW,
+      id: "demo-fe",
+      title: "Frontend Engineer",
+      status: "ACTIVE" as const,
+      questions: MOCK_QUESTIONS.slice(0, 4),
+      owner: raj,
+      createdAt: new Date("2025-05-28"),
+      _count: { invites: 24 },
+      invites: Array.from({ length: 19 }, (_, i) => ({ id: `fe-${i}` })),
+      ownerMeta: { firstName: "Raj", initials: "RA", color: "#7A766C" },
+    },
+    {
+      ...MOCK_INTERVIEW,
+      id: "demo-cs",
+      title: "Customer Success Lead",
+      status: "ACTIVE" as const,
+      owner: elif,
+      createdAt: new Date("2025-05-20"),
+      _count: { invites: 15 },
+      invites: Array.from({ length: 11 }, (_, i) => ({ id: `cs-${i}` })),
+      ownerMeta: { firstName: "Elif", initials: "ET", color: "#5E6B60" },
+    },
+    {
+      ...MOCK_DRAFT_INTERVIEW,
+      id: "demo-draft",
+      title: "Data Analyst",
+      status: "DRAFT" as const,
+      questions: MOCK_QUESTIONS.slice(0, 4),
+      owner: maya,
+      updatedAt: new Date(Date.now() - 3 * 86400000),
+      _count: { invites: 0 },
+      invites: [],
+      ownerMeta: { firstName: "Maya", initials: "MC", color: "#1C6B47" },
+    },
+    {
+      ...MOCK_INTERVIEW,
+      id: "demo-closed",
+      title: "Marketing Manager",
+      status: "CLOSED" as const,
+      owner: raj,
+      createdAt: new Date("2025-05-05"),
+      _count: { invites: 28 },
+      invites: Array.from({ length: 28 }, (_, i) => ({ id: `mk-${i}` })),
+      ownerMeta: { firstName: "Raj", initials: "RA", color: "#7A766C" },
+    },
+    {
+      ...MOCK_INTERVIEW,
+      id: "demo-pm",
+      title: "Product Manager",
+      status: "ACTIVE" as const,
+      owner: maya,
+      _count: { invites: 18 },
+      invites: Array.from({ length: 14 }, (_, i) => ({ id: `pm-${i}` })),
+      ownerMeta: { firstName: "Maya", initials: "MC", color: "#1C6B47" },
+    },
+    {
+      ...MOCK_DRAFT_INTERVIEW,
+      id: "demo-draft-2",
+      title: "UX Researcher",
+      status: "DRAFT" as const,
+      owner: raj,
+      _count: { invites: 0 },
+      invites: [],
+      ownerMeta: { firstName: "Raj", initials: "RA", color: "#7A766C" },
+    },
+    {
+      ...MOCK_INTERVIEW,
+      id: "demo-closed-2",
+      title: "Content Strategist",
+      status: "CLOSED" as const,
+      owner: maya,
+      _count: { invites: 15 },
+      invites: Array.from({ length: 11 }, (_, i) => ({ id: `cinv-${i}` })),
+      ownerMeta: { firstName: "Maya", initials: "MC", color: "#1C6B47" },
+    },
+  ];
+  if (!status) return all;
+  return all.filter((i) => i.status === status);
+}
+
+export function mockCandidates(stage?: string, interviewId?: string) {
+  const feInterview = {
+    ...MOCK_INTERVIEW,
+    id: "demo-fe",
+    title: "Frontend Engineer",
+    questions: MOCK_QUESTIONS.slice(0, 4),
+  };
+
+  const rows = [
+    {
+      id: "demo-response",
+      inviteId: "demo-invite",
+      stage: "TO_REVIEW" as const,
+      decision: null,
+      overallRating: null,
+      notes: null,
+      submittedAt: new Date(Date.now() - 2 * 3600000),
+      progressPhase: "done",
+      currentQuestionIndex: 4,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite",
+        interviewId: "demo-interview",
+        token: "demo-invite-token",
+        email: null,
+        candidateName: "Jordan Reyes",
+        status: "COMPLETED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: MOCK_INTERVIEW,
+      },
+      answers: MOCK_QUESTIONS.map((q) => ({
+        id: `a-${q.id}`,
+        responseId: "demo-response",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 420,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "New" as const,
+      avatar: { initials: "JR", color: "#1C6B47" },
+      durationMin: 7,
+      reviewed: false,
+      rubricRatings: [] as Array<{ id: string; responseId: string; criterion: string; rating: number }>,
+    },
+    {
+      id: "demo-response-2",
+      inviteId: "demo-invite-2",
+      stage: "TO_REVIEW" as const,
+      decision: null,
+      overallRating: null,
+      notes: null,
+      submittedAt: new Date(Date.now() - 4 * 3600000),
+      progressPhase: "done",
+      currentQuestionIndex: 4,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite-2",
+        interviewId: "demo-interview",
+        token: "demo-invite-2",
+        email: null,
+        candidateName: "Priya Nair",
+        status: "COMPLETED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: MOCK_INTERVIEW,
+      },
+      answers: MOCK_QUESTIONS.map((q) => ({
+        id: `a2-${q.id}`,
+        responseId: "demo-response-2",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 540,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "New" as const,
+      avatar: { initials: "PN", color: "#7A766C" },
+      durationMin: 9,
+      reviewed: false,
+      rubricRatings: [],
+    },
+    {
+      id: "demo-response-reviewed-1",
+      inviteId: "demo-invite-reviewed-1",
+      stage: "TO_REVIEW" as const,
+      decision: "ADVANCE" as const,
+      overallRating: 4,
+      notes: null,
+      submittedAt: new Date(Date.now() - 86400000),
+      progressPhase: "done",
+      currentQuestionIndex: 4,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite-reviewed-1",
+        interviewId: "demo-interview",
+        token: "demo-invite-reviewed-1",
+        email: null,
+        candidateName: "Lena Hofer",
+        status: "COMPLETED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: MOCK_INTERVIEW,
+      },
+      answers: MOCK_QUESTIONS.map((q) => ({
+        id: `ar1-${q.id}`,
+        responseId: "demo-response-reviewed-1",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 360,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "Reviewed" as const,
+      avatar: { initials: "LH", color: "#76746E" },
+      durationMin: 6,
+      reviewed: true,
+      rubricRatings: [],
+    },
+    {
+      id: "demo-response-reviewed-2",
+      inviteId: "demo-invite-reviewed-2",
+      stage: "TO_REVIEW" as const,
+      decision: "MAYBE" as const,
+      overallRating: 3,
+      notes: null,
+      submittedAt: new Date(Date.now() - 86400000),
+      progressPhase: "done",
+      currentQuestionIndex: 4,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite-reviewed-2",
+        interviewId: "demo-interview",
+        token: "demo-invite-reviewed-2",
+        email: null,
+        candidateName: "Tomás Alvarez",
+        status: "COMPLETED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: MOCK_INTERVIEW,
+      },
+      answers: MOCK_QUESTIONS.map((q) => ({
+        id: `ar2-${q.id}`,
+        responseId: "demo-response-reviewed-2",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 480,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "Reviewed" as const,
+      avatar: { initials: "TA", color: "#5E6B60" },
+      durationMin: 8,
+      reviewed: true,
+      rubricRatings: [],
+    },
+    {
+      id: "demo-response-progress",
+      inviteId: "demo-invite-progress",
+      stage: "TO_REVIEW" as const,
+      decision: null,
+      overallRating: null,
+      notes: null,
+      submittedAt: new Date(Date.now() - 2 * 86400000),
+      progressPhase: "recording",
+      currentQuestionIndex: 2,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite-progress",
+        interviewId: "demo-interview",
+        token: "demo-invite-progress",
+        email: null,
+        candidateName: "Dana Kim",
+        status: "STARTED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: MOCK_INTERVIEW,
+      },
+      answers: MOCK_QUESTIONS.slice(0, 3).map((q) => ({
+        id: `ap-${q.id}`,
+        responseId: "demo-response-progress",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 60,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "In progress" as const,
+      avatar: { initials: "DK", color: "#8A6F52" },
+      durationMin: null,
+      reviewed: false,
+      rubricRatings: [],
+    },
+    {
+      id: "demo-response-fe",
+      inviteId: "demo-invite-fe",
+      stage: "SHORTLISTED" as const,
+      decision: "ADVANCE" as const,
+      overallRating: 4,
+      notes: null,
+      submittedAt: new Date(Date.now() - 6 * 3600000),
+      progressPhase: "done",
+      currentQuestionIndex: 3,
+      createdAt: now,
+      updatedAt: now,
+      invite: {
+        id: "demo-invite-fe",
+        interviewId: "demo-fe",
+        token: "demo-invite-fe",
+        email: null,
+        candidateName: "Sam Okafor",
+        status: "COMPLETED" as const,
+        expiresAt: null,
+        createdAt: now,
+        updatedAt: now,
+        interview: feInterview,
+      },
+      answers: MOCK_QUESTIONS.slice(0, 4).map((q) => ({
+        id: `afe-${q.id}`,
+        responseId: "demo-response-fe",
+        questionId: q.id,
+        videoUrl: null,
+        durationSec: 90,
+        transcript: null,
+        retakesUsed: 0,
+        createdAt: now,
+      })),
+      statusLabel: "New" as const,
+      avatar: { initials: "SO", color: "#6B7775" },
+      durationMin: 8,
+      reviewed: false,
+      rubricRatings: [],
+    },
+  ];
+
+  let filtered = rows;
+  if (interviewId) {
+    filtered = filtered.filter((r) => r.invite.interviewId === interviewId);
+  }
+  if (stage && stage !== "ALL") {
+    filtered = filtered.filter((r) => r.stage === stage);
+  }
+  return filtered;
+}
+
+export function mockCandidateStageCounts(interviewId?: string) {
+  const rows = mockCandidates(undefined, interviewId);
+  const count = (stage: string) =>
+    rows.filter((r) => (r.stage as string) === stage).length;
+  return {
+    TO_REVIEW: count("TO_REVIEW"),
+    SHORTLISTED: count("SHORTLISTED"),
+    INTERVIEWING: count("INTERVIEWING"),
+    PASSED: count("PASSED"),
+    ALL: rows.length,
+  };
+}
+
+export function mockCandidateRoles() {
+  return mockInterviewsList()
+    .filter((i) => i.status !== "DRAFT")
+    .map((interview) => {
+      const counts = mockCandidateStageCounts(interview.id);
+      return {
+        id: interview.id,
+        title: interview.title,
+        status: interview.status,
+        invited: interview._count.invites,
+        responded: interview.invites.length,
+        toReview: counts.TO_REVIEW,
+      };
+    });
+}
+
+export function mockCandidateResponse(responseId: string) {
+  const base = mockReviewQueue().find((r) => r.id === responseId) ?? mockReviewQueue()[0]!;
+  return {
+    ...base,
+    rubricRatings: [] as Array<{ id: string; responseId: string; criterion: string; rating: number }>,
+    invite: {
+      ...base.invite,
+      interview: {
+        ...MOCK_INTERVIEW,
+        questions: MOCK_QUESTIONS,
+      },
+    },
+    answers: base.answers.map((a) => ({
+      ...a,
+      question: MOCK_QUESTIONS.find((q) => q.id === a.questionId)!,
+    })),
+  };
+}
+
+export function mockAnalytics() {
+  return {
+    kpis: {
+      invites: 95,
+      completion: 86,
+      medianDays: 1.4,
+      avgScore: 3.8,
+      invitesDelta: 18,
+      completionDelta: 4,
+      medianDelta: 0.3,
+      reviewCount: 82,
+    },
+    funnel: [
+      { label: "Invited", count: 95, pct: 100 },
+      { label: "Started", count: 87, pct: 92 },
+      { label: "Completed", count: 82, pct: 86 },
+      { label: "Reviewed", count: 54, pct: 57 },
+      { label: "Advanced", count: 23, pct: 24 },
+    ],
+    roleStats: [
+      { title: "Product Designer", invited: 32, completion: 91, avgScore: 4.1 },
+      { title: "Frontend Engineer", invited: 24, completion: 83, avgScore: 3.7 },
+      { title: "Customer Success Lead", invited: 23, completion: 85, avgScore: 3.6 },
+      { title: "Data Analyst", invited: 16, completion: 81, avgScore: 3.9 },
+    ],
+    completionTrend: [
+      { week: "W1", rate: 72 }, { week: "W2", rate: 78 }, { week: "W3", rate: 81 },
+      { week: "W4", rate: 79 }, { week: "W5", rate: 84 }, { week: "W6", rate: 86 },
+      { week: "W7", rate: 85 }, { week: "W8", rate: 88 },
+    ],
+    dropOff: ["Q1", "Q2", "Q3", "Q4", "Q5"].map((q, i) => ({
+      question: q,
+      rate: [100, 96, 93, 90, 88][i]!,
+    })),
+  };
+}
+
+export function mockInvitePayload(token: string): InvitePayload {
+  return {
+    token,
+    gate: "valid",
+    inviteId: "demo-invite",
+    responseId: null,
+    candidateName: "Jordan Reyes",
+    interview: {
+      id: "demo-interview",
+      title: "Product Designer",
+      welcomeMessage: MOCK_INTERVIEW.welcomeMessage,
+      allowRetakes: true,
+      workspaceName: "Northwind",
+      careersUrl: "https://northwind.example/careers",
+    },
+    questions: MOCK_QUESTIONS.map((q) => ({
+      id: q.id,
+      order: q.order,
+      text: q.text,
+      timeLimitSec: q.timeLimitSec,
+      retakes: q.retakes,
+      thinkTimeSec: q.thinkTimeSec,
+    })),
+    progress: {
+      phase: "intro",
+      currentQuestionIndex: 0,
+      retakesUsed: {},
+      uploadedQuestionIds: [],
+    },
+    recruiterName: "Maya Chen",
+  };
+}

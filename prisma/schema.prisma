@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  ADMIN
+  RECRUITER
+  VIEWER
+}
+
+enum InterviewStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum CandidateStage {
+  TO_REVIEW
+  SHORTLISTED
+  INTERVIEWING
+  PASSED
+}
+
+enum CandidateDecision {
+  ADVANCE
+  MAYBE
+  PASS
+}
+
+enum InviteStatus {
+  PENDING
+  STARTED
+  COMPLETED
+  EXPIRED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships WorkspaceMember[]
+  interviews  Interview[]         @relation("InterviewOwner")
+}
+
+model Workspace {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  careersUrl String?
+  logoUrl    String?
+  accentColor String  @default("#1C6B47")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  members    WorkspaceMember[]
+  interviews Interview[]
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(RECRUITER)
+  createdAt   DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Interview {
+  id              String          @id @default(cuid())
+  workspaceId     String
+  ownerId         String
+  title           String
+  status          InterviewStatus @default(DRAFT)
+  welcomeMessage  String?
+  deadlineDays    Int             @default(7)
+  allowRetakes    Boolean         @default(true)
+  autoTranscripts Boolean         @default(true)
+  requireIdCheck  Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  publishedAt     DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner     User      @relation("InterviewOwner", fields: [ownerId], references: [id])
+  questions Question[]
+  invites   Invite[]
+}
+
+model Question {
+  id          String @id @default(cuid())
+  interviewId String
+  order       Int
+  text        String
+  timeLimitSec Int   @default(120)
+  retakes     Int    @default(2)
+  thinkTimeSec Int   @default(0)
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  answers   Answer[]
+
+  @@unique([interviewId, order])
+}
+
+model Invite {
+  id          String       @id @default(cuid())
+  interviewId String
+  token       String       @unique @default(cuid())
+  email       String?
+  candidateName String?
+  status      InviteStatus @default(PENDING)
+  expiresAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  interview Interview          @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  response  CandidateResponse?
+}
+
+model CandidateResponse {
+  id          String         @id @default(cuid())
+  inviteId    String         @unique
+  stage       CandidateStage @default(TO_REVIEW)
+  decision    CandidateDecision?
+  overallRating Int?
+  notes       String?
+  submittedAt DateTime?
+  progressPhase String @default("intro")
+  currentQuestionIndex Int @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  invite  Invite   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  answers Answer[]
+  rubricRatings RubricRating[]
+}
+
+model Answer {
+  id           String   @id @default(cuid())
+  responseId   String
+  questionId   String
+  videoUrl     String?
+  durationSec  Int?
+  transcript   String?
+  retakesUsed  Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  response CandidateResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question Question          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([responseId, questionId])
+}
+
+model RubricRating {
+  id         String @id @default(cuid())
+  responseId String
+  criterion  String
+  rating     Int
+
+  response CandidateResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  @@unique([responseId, criterion])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  company   String?
+  teamSize  String?
+  message   String
+  createdAt DateTime @default(now())
+}

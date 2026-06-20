@@ -23,6 +23,8 @@ import {
   SearchField,
   SortLabel,
   StatusPill,
+  TABLE_GRID_PIPELINE,
+  TABLE_GRID_ROLES,
   TableHeader,
 } from "@/components/recruiter/recruiter-ui";
 import type { CandidateStage, InterviewStatus } from "@prisma/client";
@@ -99,6 +101,22 @@ export default async function CandidatesPage({
           <Button>Copy invite link</Button>
           <Button variant="secondary">Invite more</Button>
         </div>
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <div className="flex -space-x-2">
+            {["JR", "AL", "MK", "ST"].map((initials, i) => (
+              <span
+                key={initials}
+                className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-primary text-[10px] font-bold text-white"
+                style={{ zIndex: 4 - i }}
+              >
+                {initials}
+              </span>
+            ))}
+          </div>
+          <p className="text-[13px] font-medium text-faint">
+            {invited || 15} invited · 0 started · invites sent today
+          </p>
+        </div>
         <Link
           href="/app/candidates"
           className="mt-6 text-sm font-semibold text-primary hover:underline"
@@ -150,7 +168,10 @@ export default async function CandidatesPage({
         </div>
 
         <div className="overflow-hidden rounded-[14px] border border-hairline">
-          <TableHeader columns={["Candidate", "Status", "Rating", "Submitted", ""]} />
+          <TableHeader
+            columns={["Candidate", "Status", "Rating", "Submitted", ""]}
+            gridTemplate={TABLE_GRID_PIPELINE}
+          />
           {rows.map((c) => {
             const qTotal = 5;
             const avatar = c.avatar ?? { initials: "??", color: "#1C6B47" };
@@ -169,8 +190,8 @@ export default async function CandidatesPage({
             return (
               <div
                 key={c.id}
-                className={`grid items-center gap-4 border-b border-hairline-2 px-5 py-3.5 last:border-0 ${isReviewed ? "bg-[#FCFAF5]" : ""}`}
-                style={{ gridTemplateColumns: "2.4fr 1.1fr 1.3fr 1.2fr 0.6fr" }}
+                className={`grid items-center gap-4 border-b border-hairline-2 px-[22px] py-3.5 last:border-0 ${isReviewed ? "bg-[#FCFAF5]" : ""}`}
+                style={{ gridTemplateColumns: TABLE_GRID_PIPELINE }}
               >
                 <div className="flex items-center gap-3">
                   <AvatarCircle initials={avatar.initials} color={avatar.color} />
@@ -244,13 +265,14 @@ async function CandidatesRoleIndex({ workspaceId }: { workspaceId: string }) {
         <div className="overflow-hidden rounded-[14px] border border-hairline">
           <TableHeader
             columns={["Role", "Status", "To review", "Responses", ""]}
+            gridTemplate={TABLE_GRID_ROLES}
           />
           {roles.map((role) => (
             <Link
               key={role.id}
               href={pipelineUrl(role.id)}
               className="grid items-center gap-4 border-b border-hairline-2 px-[22px] py-[15px] last:border-0 hover:bg-reviewed"
-              style={{ gridTemplateColumns: "2.2fr 1fr 1fr 1.4fr 0.5fr" }}
+              style={{ gridTemplateColumns: TABLE_GRID_ROLES }}
             >
               <div>
                 <div className="text-[14.5px] font-semibold">{role.title}</div>

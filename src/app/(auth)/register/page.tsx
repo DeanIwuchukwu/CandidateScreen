@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { registerAction } from "@/lib/auth/actions";
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
+import { RegisterPasswordField } from "@/components/auth/register-password-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -47,17 +48,22 @@ export default function RegisterPage() {
               <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">Work email</span>
               <Input name="email" type="email" required autoComplete="email" />
             </label>
-            <label className="block">
-              <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">Password</span>
-              <Input name="password" type="password" required minLength={8} autoComplete="new-password" />
-            </label>
+            <RegisterPasswordField />
             <Button type="submit" className="w-full">
               Create account
             </Button>
           </form>
 
           <p className="mt-3 text-center text-xs text-faint-2">
-            By continuing you agree to our Terms and Privacy Policy.
+            By continuing you agree to our{" "}
+            <Link href="#" className="font-semibold text-primary underline">
+              Terms
+            </Link>
+            {" and "}
+            <Link href="#" className="font-semibold text-primary underline">
+              Privacy Policy
+            </Link>
+            .
           </p>
           <p className="mt-4 text-center text-[13.5px] text-muted">
             Already have an account?{" "}

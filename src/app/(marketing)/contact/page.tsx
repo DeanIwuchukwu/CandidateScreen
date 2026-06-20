@@ -1,8 +1,10 @@
-import { MarketingNav } from "@/components/marketing/marketing-nav";
-import { MarketingFooter } from "@/components/marketing/marketing-footer";
+import Link from "next/link";
+import { Clock, Mail, MapPin } from "lucide-react";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ContactInfoRow } from "@/components/marketing/contact-info-row";
+import { ContactFooter } from "@/components/marketing/contact-footer";
 import { submitContactForm } from "@/lib/marketing/actions";
 
 export default async function ContactPage({
@@ -13,8 +15,7 @@ export default async function ContactPage({
   const { sent } = await searchParams;
 
   return (
-    <div className="min-h-screen bg-paper">
-      <MarketingNav />
+    <>
       <main className="mx-auto grid max-w-7xl gap-12 px-6 py-16 md:grid-cols-[.9fr_1.1fr] md:px-14">
         <div>
           <Eyebrow>Contact</Eyebrow>
@@ -25,17 +26,16 @@ export default async function ContactPage({
             Whether you&apos;re screening for one role or one hundred, we&apos;ll help you get set up.
             Most messages get a reply within a few hours.
           </p>
-          <div className="mt-8 space-y-4 text-sm">
-            <p>
-              <span className="font-semibold">Email us</span>
-              <br />
+          <div className="mt-9 flex flex-col gap-5">
+            <ContactInfoRow icon={Mail} title="Email us">
               hello@candidatescreen.com
-            </p>
-            <p>
-              <span className="font-semibold">Response time</span>
-              <br />
+            </ContactInfoRow>
+            <ContactInfoRow icon={Clock} title="Response time">
               Within a few hours, Mon–Fri
-            </p>
+            </ContactInfoRow>
+            <ContactInfoRow icon={MapPin} title="Office">
+              Remote-first · Lisbon & Toronto
+            </ContactInfoRow>
           </div>
         </div>
         <form
@@ -87,9 +87,13 @@ export default async function ContactPage({
           <Button type="submit" className="w-full">
             Send message
           </Button>
+          <p className="mt-3.5 text-center text-[12px] leading-relaxed text-faint-2">
+            By submitting you agree to our{" "}
+            <Link href="#" className="font-semibold text-primary">Privacy Policy</Link>.
+          </p>
         </form>
       </main>
-      <MarketingFooter />
-    </div>
+      <ContactFooter />
+    </>
   );
 }

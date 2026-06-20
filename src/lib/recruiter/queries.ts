@@ -240,6 +240,14 @@ export async function getCandidates(
   });
 }
 
+export async function getReviewQueueIds(workspaceId: string, interviewId?: string) {
+  const candidates = await getCandidates(workspaceId, {
+    stage: "TO_REVIEW",
+    interviewId,
+  });
+  return candidates.map((c) => c.id);
+}
+
 export async function getCandidateResponse(workspaceId: string, responseId: string) {
   if (isDevBypass()) return mockCandidateResponse(responseId);
 

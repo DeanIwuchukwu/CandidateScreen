@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { requireSessionUser } from "@/lib/auth/session";
-import { getCandidateResponse, getUserWorkspace } from "@/lib/recruiter/queries";
+import {
+  getCandidateResponse,
+  getReviewQueueIds,
+  getUserWorkspace,
+} from "@/lib/recruiter/queries";
 import { ReviewPanel } from "@/components/recruiter/review-panel";
 import { RUBRIC_CRITERIA } from "@/lib/types";
 
@@ -14,6 +18,10 @@ export default async function ReviewPage({
   const { workspace } = await getUserWorkspace(user.id);
   const response = await getCandidateResponse(workspace.id, responseId);
   if (!response) notFound();
+
+  const interviewId = response.invite.interview.id;
+  const queueIds = await getReviewQueueIds(workspace.id, interviewId);
+  const queueIndex = queueIds.indexOf(responseId);
 
   const rubric: Record<string, number> = {};
   RUBRIC_CRITERIA.forEach((c) => {
@@ -38,8 +46,11 @@ export default async function ReviewPage({
           questionId: a.questionId,
           videoUrl: a.videoUrl,
           transcript: a.transcript,
+          durationSec: a.durationSec ?? undefined,
         })),
         rubric,
+        queueIds,
+        queueIndex: queueIndex >= 0 ? queueIndex : 0,
       }}
     />
   );

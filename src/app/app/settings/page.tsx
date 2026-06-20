@@ -26,7 +26,8 @@ export default async function SettingsPage() {
         <div className="flex flex-col gap-[22px]">
           <form
             action={updateWorkspaceAction}
-            className="rounded-2xl border border-hairline p-6"
+            id="branding"
+            className="scroll-mt-24 rounded-2xl border border-hairline p-6"
           >
             <h2 className="mb-[18px] text-[15px] font-semibold">Company profile</h2>
             <div className="mb-5 flex items-center gap-4">
@@ -86,7 +87,7 @@ export default async function SettingsPage() {
         </div>
 
         <div className="flex flex-col gap-[22px]">
-          <div className="rounded-2xl border border-hairline p-6">
+          <div className="rounded-2xl border border-hairline p-6 scroll-mt-24" id="notifications">
             <h2 className="mb-4 text-[15px] font-semibold">Notifications</h2>
             <div className="flex flex-col gap-4">
               {[
@@ -105,7 +106,7 @@ export default async function SettingsPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-hairline">
+          <div className="overflow-hidden rounded-2xl border border-hairline scroll-mt-24" id="team">
             <div className="flex items-center justify-between px-[22px] py-4">
               <h2 className="text-[15px] font-semibold">Team · {members.length} members</h2>
               <Button size="sm">

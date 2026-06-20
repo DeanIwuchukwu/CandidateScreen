@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { loginAction } from "@/lib/auth/actions";
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -24,9 +25,13 @@ export default function LoginPage() {
       <div className="flex items-center justify-center bg-surface p-8">
         <div className="w-full max-w-[368px]">
           <h1 className="font-display text-[30px] font-medium leading-tight">Welcome back</h1>
-          <p className="mt-2 text-[14.5px] text-muted">Sign in to your workspace.</p>
+          <p className="mt-2 text-[14.5px] text-muted">Sign in to your Northwind workspace.</p>
 
-          <form action={loginAction} className="mt-6 space-y-4">
+          <div className="mt-6">
+            <OAuthButtons />
+          </div>
+
+          <form action={loginAction} className="mt-4 space-y-4">
             <label className="block">
               <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">Work email</span>
               <Input name="email" type="email" required autoComplete="email" />

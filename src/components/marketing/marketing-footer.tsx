@@ -1,6 +1,21 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/ui/wordmark";
 
+const linkMap: Record<string, string> = {
+  Features: "/#product",
+  Pricing: "/#pricing",
+  Security: "/#product",
+  Changelog: "/#product",
+  About: "/contact",
+  Customers: "/#customers",
+  Careers: "/contact",
+  Contact: "/contact",
+  Privacy: "#",
+  Terms: "#",
+  GDPR: "#",
+  DPA: "#",
+};
+
 export function MarketingFooter() {
   return (
     <footer className="bg-ink text-[#C5CAC2]">
@@ -30,7 +45,11 @@ export function MarketingFooter() {
               {col.title}
             </span>
             {col.links.map((link) => (
-              <Link key={link} href="#" className="text-[#9AA09A] hover:text-white">
+              <Link
+                key={link}
+                href={linkMap[link] ?? "#"}
+                className="text-[#9AA09A] hover:text-white"
+              >
                 {link}
               </Link>
             ))}

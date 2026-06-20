@@ -23,6 +23,8 @@ type ReviewData = {
     durationSec?: number;
   }>;
   rubric: Record<string, number>;
+  queueIds: string[];
+  queueIndex: number;
 };
 
 const DEMO_TRANSCRIPT = [
@@ -74,6 +76,23 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
   const question = data.questions[activeQ];
   const answer = data.answers.find((a) => a.questionId === question?.id);
 
+  const queueTotal = data.queueIds.length;
+  const canPrev = data.queueIndex > 0;
+  const canNext = data.queueIndex < queueTotal - 1;
+  const prevId = canPrev ? data.queueIds[data.queueIndex - 1] : null;
+  const nextId = canNext ? data.queueIds[data.queueIndex + 1] : null;
+
+  const copyTranscript = async () => {
+    const text =
+      answer?.transcript ??
+      DEMO_TRANSCRIPT.map((l) => l.text).join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
   const persist = (extra?: Parameters<typeof saveReviewAction>[1]) => {
     startTransition(() =>
       saveReviewAction(data.id, {
@@ -107,20 +126,42 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[12.5px] font-semibold text-faint">Candidate 1 of 12</span>
+          <span className="text-[12.5px] font-semibold text-faint">
+            Candidate {queueTotal > 0 ? data.queueIndex + 1 : 1} of {queueTotal || 1}
+          </span>
           <div className="flex gap-1.5">
-            <button
-              type="button"
-              className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-[#E4DDCD] bg-white"
-            >
-              <ChevronLeft size={16} className="text-muted" />
-            </button>
-            <button
-              type="button"
-              className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-[#E4DDCD] bg-white"
-            >
-              <ChevronRight size={16} className="text-muted" />
-            </button>
+            {prevId ? (
+              <Link
+                href={`/app/candidates/${prevId}/review`}
+                className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-[#E4DDCD] bg-white"
+              >
+                <ChevronLeft size={16} className="text-muted" />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-[#E4DDCD] bg-white opacity-40"
+              >
+                <ChevronLeft size={16} className="text-muted" />
+              </button>
+            )}
+            {nextId ? (
+              <Link
+                href={`/app/candidates/${nextId}/review`}
+                className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-[#E4DDCD] bg-white"
+              >
+                <ChevronRight size={16} className="text-muted" />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-[#E4DDCD] bg-white opacity-40"
+              >
+                <ChevronRight size={16} className="text-muted" />
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -196,7 +237,11 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
           <div className="mt-[22px] border-t border-hairline-3 pt-[18px]">
             <div className="mb-3 flex items-center justify-between">
               <SectionLabel>Transcript</SectionLabel>
-              <button type="button" className="text-xs font-semibold text-primary">
+              <button
+                type="button"
+                onClick={() => copyTranscript()}
+                className="text-xs font-semibold text-primary"
+              >
                 Auto-generated · Copy
               </button>
             </div>

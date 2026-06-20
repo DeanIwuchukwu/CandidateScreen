@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { requestPasswordResetAction } from "@/lib/auth/actions";
 import { AuthBrandPanel } from "@/components/auth/auth-brand-panel";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,8 @@ export default function ResetPage() {
             href="/login"
             className="mt-5 flex items-center justify-center gap-2 text-[13.5px] font-semibold text-primary"
           >
-            ← Back to sign in
+            <ChevronLeft size={16} />
+            Back to sign in
           </Link>
         </div>
       </div>

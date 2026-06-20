@@ -1,0 +1,55 @@
+---
+description: Commit message structure — title plus scoped body paragraphs
+alwaysApply: true
+---
+
+# Commit messages
+
+When drafting or suggesting git commit messages, use this structure (not a single vague line).
+
+## Structure
+
+1. **Title** — One line: what was added or changed, active voice, no period.
+2. **Body** — Short paragraphs (not bullet lists), grouped by area (backend/API, frontend, infra, etc.).
+3. **Footer** — Verification when relevant: tests, typecheck, build, manual checks.
+
+## Example
+
+```
+Add batch verification (concurrent) and results dashboard
+
+Add a /verify/batch endpoint that verifies many COLA records concurrently
+(bounded by a semaphore) and isolates per-record failures, plus a frontend
+Batch tab: multi-file upload, summary chips with status filtering, a sortable
+results table, per-row drill-in reusing the report, and CSV export.
+
+46 backend tests green; frontend typechecks. Browser-verified on 3 real
+records (all PASS, processed in parallel).
+```
+
+## Example (this project)
+
+```
+Add Candidate Screen async video interview platform
+
+Ship a Next.js 15 app with marketing pages, email auth, a recruiter console,
+and a candidate recording flow backed by Postgres and Prisma.
+
+Recruiter console: dashboard, interviews list/build, role-scoped candidates
+index and pipeline, video review with scorecard, analytics, settings, and
+billing. Candidate experience: invite link flow with camera/mic setup,
+think-time countdown, recording, per-question review, and submission.
+
+Includes session auth, workspace model, mock-data dev bypass for local UI
+preview, and design-handoff-aligned recruiter UI components.
+
+Production build and TypeScript check pass; .env and design handoff excluded
+via .gitignore.
+```
+
+## Rules
+
+- Title states the **user-visible outcome** or feature, not "update files" or "fix stuff".
+- Body explains **why** and **what areas** changed; mention important endpoints, routes, or UX flows.
+- Do not list every file path in the message.
+- For `git commit -m`, use multiple `-m` flags for title and body paragraphs when the shell does not support heredocs.

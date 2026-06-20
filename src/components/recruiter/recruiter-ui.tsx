@@ -56,20 +56,25 @@ export function CountTabs({ tabs }: { tabs: Tab[] }) {
   );
 }
 
+export const TABLE_GRID_STANDARD = "2.6fr 1fr 1.4fr 1.2fr 0.5fr";
+export const TABLE_GRID_ROLES = "2.2fr 1fr 1fr 1.4fr 0.5fr";
+export const TABLE_GRID_PIPELINE = "2.4fr 1.1fr 1.3fr 1.2fr 0.6fr";
+
 export function TableHeader({
   columns,
+  gridTemplate,
 }: {
   columns: string[];
+  gridTemplate?: string;
 }) {
+  const template =
+    gridTemplate ??
+    (columns.length === 5 ? TABLE_GRID_STANDARD : TABLE_GRID_PIPELINE);
+
   return (
     <div
       className="grid gap-4 border-b border-hairline bg-paper-2 px-[22px] py-3 text-[11px] font-semibold uppercase tracking-[0.05em] text-faint-2"
-      style={{
-        gridTemplateColumns:
-          columns.length === 5
-            ? "2.6fr 1fr 1.4fr 1.2fr 0.5fr"
-            : "2.4fr 1.1fr 1.3fr 1.2fr 0.6fr",
-      }}
+      style={{ gridTemplateColumns: template }}
     >
       {columns.map((col) => (
         <span key={col}>{col}</span>
@@ -270,9 +275,9 @@ export function FilterButton({ children }: { children: React.ReactNode }) {
 
 const settingsTabs = [
   { label: "Workspace", href: "/app/settings", key: "workspace" },
-  { label: "Team", href: "/app/settings", key: "team" },
-  { label: "Branding", href: "/app/settings", key: "branding" },
-  { label: "Notifications", href: "/app/settings", key: "notifications" },
+  { label: "Team", href: "/app/settings#team", key: "team" },
+  { label: "Branding", href: "/app/settings#branding", key: "branding" },
+  { label: "Notifications", href: "/app/settings#notifications", key: "notifications" },
   { label: "Billing", href: "/app/settings/billing", key: "billing" },
 ] as const;
 

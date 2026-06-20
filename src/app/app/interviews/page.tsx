@@ -12,6 +12,7 @@ import {
   ResponseProgress,
   SearchField,
   SortLabel,
+  TABLE_GRID_STANDARD,
   TableHeader,
 } from "@/components/recruiter/recruiter-ui";
 
@@ -86,6 +87,7 @@ export default async function InterviewsPage({
         <div className="overflow-hidden rounded-[14px] border border-hairline">
           <TableHeader
             columns={["Interview", "Status", "Responses", "Owner", ""]}
+            gridTemplate={TABLE_GRID_STANDARD}
           />
           {interviews.map((interview) => {
             const responded = interview.invites.length;
@@ -112,7 +114,7 @@ export default async function InterviewsPage({
                 key={interview.id}
                 href={href}
                 className="grid items-center gap-4 border-b border-hairline-2 px-[22px] py-[15px] last:border-0 hover:bg-reviewed"
-                style={{ gridTemplateColumns: "2.6fr 1fr 1.4fr 1.2fr 0.5fr" }}
+                style={{ gridTemplateColumns: TABLE_GRID_STANDARD }}
               >
                 <div>
                   <div

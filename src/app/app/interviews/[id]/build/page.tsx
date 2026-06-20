@@ -36,7 +36,14 @@ export default async function BuildInterviewPage({
           <h1 className="font-display text-[28px] font-medium leading-none">Build an interview</h1>
         </div>
         <div className="flex gap-2.5">
-          <Button variant="secondary">Preview as candidate</Button>
+          <Link
+            href="/i/demo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-9 items-center justify-center rounded-[9px] border border-[#E0D9C8] bg-surface px-3.5 text-[13px] font-semibold text-ink hover:bg-paper-2"
+          >
+            Preview as candidate
+          </Link>
           <PublishButton interviewId={id} />
         </div>
       </header>

@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { Wordmark } from "@/components/ui/wordmark";
+import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -55,19 +56,29 @@ export function RecruiterSidebar({
           );
         })}
       </nav>
-      <div className="mt-auto flex items-center gap-2.5 border-t border-hairline px-2 pt-4">
-        <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-semibold text-white">
-          {userName
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .slice(0, 2)
-            .toUpperCase()}
-        </span>
-        <div className="leading-tight">
-          <div className="text-[13px] font-semibold">{userName}</div>
-          <div className="text-xs font-medium text-faint">{workspaceName}</div>
+      <div className="mt-auto border-t border-hairline px-2 pt-4">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-semibold text-white">
+            {userName
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="text-[13px] font-semibold">{userName}</div>
+            <div className="text-xs font-medium text-faint">{workspaceName}</div>
+          </div>
         </div>
+        <form action={logoutAction} className="mt-2.5 px-1">
+          <button
+            type="submit"
+            className="text-[12.5px] font-semibold text-faint transition-colors hover:text-ink"
+          >
+            Log out
+          </button>
+        </form>
       </div>
     </aside>
   );

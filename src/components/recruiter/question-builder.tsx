@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { reorderQuestionsAction, updateQuestionAction } from "@/lib/recruiter/actions";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +41,16 @@ export function QuestionBuilder({
   const [questions, setQuestions] = useState(initial);
   const [activeId, setActiveId] = useState(initial[0]?.id ?? "");
   const [, startTransition] = useTransition();
+
+  const questionIds = initial.map((q) => q.id).join(",");
+
+  useEffect(() => {
+    setQuestions(initial);
+    setActiveId((current) => {
+      if (initial.some((q) => q.id === current)) return current;
+      return initial[0]?.id ?? "";
+    });
+  }, [questionIds, initial]);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),

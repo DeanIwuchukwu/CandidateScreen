@@ -314,20 +314,38 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ToggleSwitch({ on = false }: { on?: boolean }) {
+export function ToggleSwitch({
+  on = false,
+  onChange,
+  disabled = false,
+}: {
+  on?: boolean;
+  onChange?: (value: boolean) => void;
+  disabled?: boolean;
+}) {
+  const interactive = Boolean(onChange) && !disabled;
+
   return (
-    <span
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled || !onChange}
+      onClick={() => onChange?.(!on)}
       className={cn(
-        "relative h-[23px] w-10 shrink-0 rounded-full",
+        "relative h-[23px] w-10 shrink-0 rounded-full transition-colors",
         on ? "bg-primary" : "bg-[#DCD5C4]",
+        interactive && "cursor-pointer",
+        !interactive && "cursor-default",
+        disabled && "opacity-60",
       )}
     >
       <span
         className={cn(
-          "absolute top-0.5 h-[19px] w-[19px] rounded-full bg-white",
+          "absolute top-0.5 h-[19px] w-[19px] rounded-full bg-white transition-[left,right]",
           on ? "right-0.5" : "left-0.5",
         )}
       />
-    </span>
+    </button>
   );
 }

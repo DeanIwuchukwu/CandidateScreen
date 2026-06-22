@@ -89,7 +89,11 @@ export async function updateQuestionAction(
   revalidatePath(`/app/interviews/${question.interviewId}/build`);
 }
 
-export async function addQuestionAction(interviewId: string) {
+export async function addQuestionAction(interviewId: string, _formData?: FormData) {
+  if (isDevBypass()) {
+    revalidatePath(`/app/interviews/${interviewId}/build`);
+    return;
+  }
   const { workspace } = await workspaceGuard();
   const interview = await prisma.interview.findFirst({
     where: { id: interviewId, workspaceId: workspace.id },

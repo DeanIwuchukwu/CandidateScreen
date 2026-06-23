@@ -17,9 +17,14 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { reorderQuestionsAction, updateQuestionAction } from "@/lib/recruiter/actions";
+import {
+  deleteQuestionAction,
+  reorderQuestionsAction,
+  updateQuestionAction,
+} from "@/lib/recruiter/actions";
 import { cn } from "@/lib/utils";
 
 type Question = {
@@ -31,6 +36,11 @@ type Question = {
   thinkTimeSec: number;
 };
 
+function normalizeText(text: string) {
+  const trimmed = text.trim();
+  return trimmed || "New question";
+}
+
 export function QuestionBuilder({
   interviewId,
   questions: initial,
@@ -38,12 +48,16 @@ export function QuestionBuilder({
   interviewId: string;
   questions: Question[];
 }) {
+  const router = useRouter();
   const [questions, setQuestions] = useState(initial);
   const [activeId, setActiveId] = useState(initial[0]?.id ?? "");
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const prevCountRef = useRef(initial.length);
+  const questionsRef = useRef(questions);
 
   const questionIds = initial.map((q) => q.id).join(",");
+
+  questionsRef.current = questions;
 
   useEffect(() => {
     setQuestions(initial);
@@ -56,25 +70,68 @@ export function QuestionBuilder({
       });
     }
     prevCountRef.current = initial.length;
-  }, [questionIds, initial]);
+    // Only resync from the server when the question set changes (add/delete/reorder).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `initial` is read when `questionIds` changes
+  }, [questionIds]);
 
-  function patchQuestion(id: string, patch: Partial<Question>) {
-    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
-  }
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const active = questions.find((q) => q.id === activeId) ?? questions[0];
+  const activeIndex = active ? questions.findIndex((q) => q.id === active.id) : -1;
+
+  function patchQuestion(id: string, patch: Partial<Question>) {
+    setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+  }
+
+  function persistQuestion(id: string) {
+    const q = questionsRef.current.find((item) => item.id === id);
+    if (!q) return;
+
+    const payload = {
+      text: normalizeText(q.text),
+      timeLimitSec: q.timeLimitSec,
+      retakes: q.retakes,
+      thinkTimeSec: q.thinkTimeSec,
+    };
+
+    patchQuestion(id, { text: payload.text });
+    startTransition(() => updateQuestionAction(id, payload));
+  }
+
+  function selectQuestion(id: string) {
+    if (id === activeId) return;
+    if (activeId) persistQuestion(activeId);
+    setActiveId(id);
+  }
+
+  function deleteQuestion(id: string) {
+    if (questions.length <= 1 || pending) return;
+
+    const nextQuestions = questions.filter((q) => q.id !== id);
+    const nextActiveId =
+      activeId === id ? (nextQuestions[0]?.id ?? "") : activeId;
+
+    setQuestions(nextQuestions);
+    setActiveId(nextActiveId);
+
+    startTransition(async () => {
+      await deleteQuestionAction(id, interviewId);
+      router.refresh();
+    });
+  }
 
   const onDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = questions.findIndex((q) => q.id === active.id);
+    const { active: dragged, over } = event;
+    if (!over || dragged.id === over.id) return;
+
+    const oldIndex = questions.findIndex((q) => q.id === dragged.id);
     const newIndex = questions.findIndex((q) => q.id === over.id);
     const next = arrayMove(questions, oldIndex, newIndex);
     setQuestions(next);
+
     startTransition(() =>
       reorderQuestionsAction(
         interviewId,
@@ -93,27 +150,29 @@ export function QuestionBuilder({
               question={q}
               index={i}
               isActive={q.id === active?.id}
-              onSelect={() => setActiveId(q.id)}
+              canDelete={questions.length > 1}
+              onSelect={() => selectQuestion(q.id)}
+              onDelete={() => deleteQuestion(q.id)}
             />
           ))}
         </SortableContext>
       </DndContext>
 
       {active && (
-        <div key={active.id} className="rounded-[14px] border border-primary/30 bg-primary-tint/30 p-4">
+        <div className="rounded-[14px] border border-primary/30 bg-primary-tint/30 p-4">
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-primary">
-            Editing question {(questions.findIndex((q) => q.id === active.id) ?? 0) + 1}
+            Editing question {activeIndex + 1}
           </p>
-          <label className="block text-sm font-semibold text-muted">Question text</label>
-          <textarea
-            className="mt-2 w-full rounded-[10px] border border-[#E4DDCD] bg-white p-3 font-display text-lg"
-            defaultValue={active.text}
-            onBlur={(e) => {
-              const text = e.target.value.trim() || "New question";
-              patchQuestion(active.id, { text });
-              startTransition(() => updateQuestionAction(active.id, { text }));
-            }}
-          />
+          <label className="block text-sm font-semibold text-muted">
+            Question text
+            <textarea
+              aria-label="Question text"
+              className="mt-2 w-full rounded-[10px] border border-[#E4DDCD] bg-white p-3 font-display text-lg"
+              value={active.text}
+              onChange={(e) => patchQuestion(active.id, { text: e.target.value })}
+              onBlur={() => persistQuestion(active.id)}
+            />
+          </label>
           <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
             {(
               [
@@ -126,14 +185,13 @@ export function QuestionBuilder({
                 <span className="font-semibold text-muted">{label}</span>
                 <input
                   type="number"
-                  name={key}
-                  defaultValue={val}
+                  aria-label={label}
+                  value={val}
                   className="mt-1 w-full rounded-[10px] border border-[#E4DDCD] px-2 py-1.5"
-                  onBlur={(e) => {
-                    const value = Number(e.target.value);
-                    patchQuestion(active.id, { [key]: value });
-                    startTransition(() => updateQuestionAction(active.id, { [key]: value }));
-                  }}
+                  onChange={(e) =>
+                    patchQuestion(active.id, { [key]: Number(e.target.value) || 0 })
+                  }
+                  onBlur={() => persistQuestion(active.id)}
                 />
               </label>
             ))}
@@ -148,12 +206,16 @@ function SortableQuestion({
   question,
   index,
   isActive,
+  canDelete,
   onSelect,
+  onDelete,
 }: {
   question: Question;
   index: number;
   isActive: boolean;
+  canDelete: boolean;
   onSelect: () => void;
+  onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: question.id,
@@ -165,7 +227,9 @@ function SortableQuestion({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
         "flex cursor-pointer items-center gap-3 rounded-[12px] border p-3 transition-colors",
-        isActive ? "border-primary bg-primary-tint/40 ring-1 ring-primary/20" : "border-hairline bg-white hover:border-primary/40",
+        isActive
+          ? "border-primary bg-primary-tint/40 ring-1 ring-primary/20"
+          : "border-hairline bg-white hover:border-primary/40",
       )}
       onClick={onSelect}
       onKeyDown={(e) => {
@@ -195,9 +259,22 @@ function SortableQuestion({
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold">{question.text}</div>
         <div className="text-xs text-faint">
-          Video · {Math.round(question.timeLimitSec / 60)} min
+          Video · {Math.max(1, Math.round(question.timeLimitSec / 60))} min
         </div>
       </div>
+      {canDelete && (
+        <button
+          type="button"
+          aria-label={`Delete question ${index + 1}`}
+          className="rounded-lg p-1.5 text-faint hover:bg-red-50 hover:text-red-600"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <Trash2 size={16} />
+        </button>
+      )}
     </div>
   );
 }

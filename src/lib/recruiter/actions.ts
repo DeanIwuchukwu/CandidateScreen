@@ -129,6 +129,31 @@ export async function reorderQuestionsAction(interviewId: string, orderedIds: st
   revalidatePath(`/app/interviews/${interviewId}/build`);
 }
 
+export async function deleteQuestionAction(questionId: string, interviewId: string) {
+  if (isDevBypass()) {
+    revalidatePath(`/app/interviews/${interviewId}/build`);
+    return;
+  }
+  const { workspace } = await workspaceGuard();
+  const interview = await prisma.interview.findFirst({
+    where: { id: interviewId, workspaceId: workspace.id },
+    include: { questions: { orderBy: { order: "asc" } } },
+  });
+  if (!interview || interview.questions.length <= 1) return;
+
+  const question = interview.questions.find((q) => q.id === questionId);
+  if (!question) return;
+
+  await prisma.question.delete({ where: { id: questionId } });
+
+  const remaining = interview.questions.filter((q) => q.id !== questionId);
+  await Promise.all(
+    remaining.map((q, order) => prisma.question.update({ where: { id: q.id }, data: { order } })),
+  );
+
+  revalidatePath(`/app/interviews/${interviewId}/build`);
+}
+
 export async function publishInterviewAction(interviewId: string) {
   if (isDevBypass()) return { token: "demo-invite-token" };
   const { workspace } = await workspaceGuard();

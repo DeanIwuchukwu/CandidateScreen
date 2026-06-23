@@ -32,7 +32,53 @@ test.describe("Build interview", () => {
     await page.getByRole("button", { name: /add a question/i }).click();
 
     await expect.poll(() => readQuestionCount(page), { timeout: 20_000 }).toBe(before + 1);
-    await expect(page.getByText(/new question/i).first()).toBeVisible();
+    await expect(page.getByText("Editing question 2")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Question 2: New question/i })).toBeVisible();
+  });
+
+  test("editing question text updates the list card live", async ({ page }) => {
+    await openNewInterviewBuilder(page, uniqueLabel("E2E Edit Text"));
+    await page.getByRole("button", { name: /add a question/i }).click();
+    await expect(page.getByText("Editing question 2")).toBeVisible();
+
+    const customText = `What motivates you at work? ${Date.now()}`;
+    await page.getByRole("textbox", { name: /question text/i }).fill(customText);
+
+    await expect(
+      page.getByRole("button", { name: new RegExp(`Question 2: ${customText}`) }),
+    ).toBeVisible();
+
+    await page.getByRole("textbox", { name: /question text/i }).blur();
+    await page.reload();
+    await expect(page.getByRole("button", { name: new RegExp(customText) })).toBeVisible();
+  });
+
+  test("switching questions shows the correct editor content", async ({ page }) => {
+    await openNewInterviewBuilder(page, uniqueLabel("E2E Switch"));
+    const q1Text = `Question one ${Date.now()}`;
+    await page.getByRole("textbox", { name: /question text/i }).fill(q1Text);
+
+    await page.getByRole("button", { name: /add a question/i }).click();
+    const q2Text = `Question two ${Date.now()}`;
+    await page.getByRole("textbox", { name: /question text/i }).fill(q2Text);
+
+    await page.getByRole("button", { name: new RegExp(`Question 1: ${q1Text}`) }).click();
+    await expect(page.getByText("Editing question 1")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: /question text/i })).toHaveValue(q1Text);
+
+    await page.getByRole("button", { name: new RegExp(`Question 2: ${q2Text}`) }).click();
+    await expect(page.getByText("Editing question 2")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: /question text/i })).toHaveValue(q2Text);
+  });
+
+  test("delete question removes it from the list", async ({ page }) => {
+    await openNewInterviewBuilder(page, uniqueLabel("E2E Delete"));
+    await page.getByRole("button", { name: /add a question/i }).click();
+    await expect.poll(() => readQuestionCount(page)).toBe(2);
+
+    await page.getByRole("button", { name: /delete question 2/i }).click();
+    await expect.poll(() => readQuestionCount(page), { timeout: 20_000 }).toBe(1);
+    await expect(page.getByRole("button", { name: /delete question/i })).toHaveCount(0);
   });
 
   test("settings toggles persist after save", async ({ page }) => {

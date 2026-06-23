@@ -20,7 +20,7 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: process.env.CI ? "retain-on-failure" : "off",
     channel: process.env.E2E_BROWSER_CHANNEL ?? "chrome",
   },
   projects: [

@@ -15,6 +15,14 @@ type InterviewSettings = {
   requireIdCheck: boolean;
 };
 
+const DEADLINE_OPTIONS = [3, 5, 7, 14, 21, 30];
+
+function deadlineOptions(current: number) {
+  return DEADLINE_OPTIONS.includes(current)
+    ? DEADLINE_OPTIONS
+    : [...DEADLINE_OPTIONS, current].sort((a, b) => a - b);
+}
+
 export function InterviewSettingsForm({ interview }: { interview: InterviewSettings }) {
   const [allowRetakes, setAllowRetakes] = useState(interview.allowRetakes);
   const [autoTranscripts, setAutoTranscripts] = useState(interview.autoTranscripts);
@@ -35,11 +43,22 @@ export function InterviewSettingsForm({ interview }: { interview: InterviewSetti
       </label>
       <label className="block text-[12.5px] font-semibold text-muted">
         Deadline to respond
-        <div className="mt-1.5 flex w-full items-center justify-between rounded-[10px] border border-[#E4DDCD] bg-white px-3 py-2.5 text-sm font-medium">
-          {interview.deadlineDays} days after invite
-          <span className="text-faint-2">▾</span>
+        <div className="relative mt-1.5">
+          <select
+            name="deadlineDays"
+            defaultValue={interview.deadlineDays}
+            className="w-full appearance-none rounded-[10px] border border-[#E4DDCD] bg-white px-3 py-2.5 pr-8 text-sm font-medium"
+          >
+            {deadlineOptions(interview.deadlineDays).map((days) => (
+              <option key={days} value={days}>
+                {days} days after invite
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-faint-2">
+            ▾
+          </span>
         </div>
-        <input type="hidden" name="deadlineDays" value={interview.deadlineDays} />
       </label>
       <label className="block text-[12.5px] font-semibold text-muted">
         Welcome message

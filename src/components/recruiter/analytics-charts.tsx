@@ -108,17 +108,19 @@ export function AnalyticsCharts({
 
         <div className="rounded-2xl border border-hairline p-6">
           <SectionLabel>Where candidates drop off</SectionLabel>
-          <div className="mt-[18px] flex h-[130px] items-end gap-3.5">
+          <div className="mt-5 flex items-end justify-between gap-3">
             {dropOff.map((d) => (
-              <div key={d.question} className="flex flex-1 flex-col items-center gap-2">
-                <span className="text-[11px] font-semibold text-muted">{d.rate}%</span>
-                <div className="flex h-[120px] w-full items-end rounded-t-[7px] bg-primary-tint">
+              <div key={d.question} className="flex min-w-0 flex-1 flex-col items-center">
+                <span className="mb-2 text-[11px] font-semibold text-muted">{d.rate}%</span>
+                <div className="flex h-[96px] w-full items-end overflow-hidden rounded-t-[7px] bg-primary-tint">
                   <div
                     className="w-full rounded-t-[7px] bg-primary"
                     style={{ height: `${d.rate}%` }}
                   />
                 </div>
-                <span className="text-[11px] font-semibold text-faint-2">{d.question}</span>
+                <span className="mt-2 text-center text-[11px] font-semibold leading-tight text-faint-2">
+                  {d.question}
+                </span>
               </div>
             ))}
           </div>

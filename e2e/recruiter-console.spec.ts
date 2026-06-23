@@ -17,10 +17,11 @@ test.describe("Recruiter console", () => {
 
     await page.getByRole("link", { name: "Analytics" }).click();
     await expect(page).toHaveURL(/\/app\/analytics/);
+    await expect(page.getByRole("heading", { name: /analytics/i })).toBeVisible();
 
     await page.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/app\/settings/);
-    await expect(page.getByRole("heading", { name: /settings/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
   });
 
   test("logout returns to login", async ({ page }) => {

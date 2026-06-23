@@ -1,10 +1,24 @@
-import { test, expect } from "@playwright/test";
-import {
-  openNewInterviewBuilder,
-  readQuestionCount,
-  toggleByLabel,
-  uniqueLabel,
-} from "../playwright/helpers";
+import { test, expect, type Page } from "@playwright/test";
+
+function uniqueLabel(prefix: string) {
+  return `${prefix} ${Date.now()}`;
+}
+
+async function openNewInterviewBuilder(page: Page, title: string) {
+  await page.goto("/app/interviews/new");
+  await page.getByRole("textbox", { name: /role title/i }).fill(title);
+  await page.getByRole("button", { name: /continue to builder/i }).click();
+}
+
+async function readQuestionCount(page: Page): Promise<number> {
+  const text = await page.getByText(/questions · \d+/i).textContent();
+  const match = text?.match(/questions · (\d+)/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function toggleByLabel(page: Page, label: string) {
+  return page.getByText(label, { exact: true }).locator("xpath=..").getByRole("switch");
+}
 
 test.describe("Build interview", () => {
   test("add question increases the question count", async ({ page }) => {
@@ -32,7 +46,11 @@ test.describe("Build interview", () => {
     await idToggle.click();
     await expect(idToggle).toHaveAttribute("aria-checked", wasOn ? "false" : "true");
 
+    const saveResponse = page.waitForResponse(
+      (response) => response.request().method() === "POST" && response.ok(),
+    );
     await page.getByRole("button", { name: /save settings/i }).click();
+    await saveResponse;
 
     await page.reload();
     await expect(page.getByRole("heading", { name: /build an interview/i })).toBeVisible();

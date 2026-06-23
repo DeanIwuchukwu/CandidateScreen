@@ -52,7 +52,7 @@ export function QuestionBuilder({
   const [questions, setQuestions] = useState(initial);
   const [activeId, setActiveId] = useState(initial[0]?.id ?? "");
   const [pending, startTransition] = useTransition();
-  const prevCountRef = useRef(initial.length);
+  const prevIdsRef = useRef(new Set(initial.map((q) => q.id)));
   const questionsRef = useRef(questions);
 
   const questionIds = initial.map((q) => q.id).join(",");
@@ -60,16 +60,20 @@ export function QuestionBuilder({
   questionsRef.current = questions;
 
   useEffect(() => {
+    const added = initial.filter((q) => !prevIdsRef.current.has(q.id));
+
     setQuestions(initial);
-    if (initial.length > prevCountRef.current) {
-      setActiveId(initial[initial.length - 1]!.id);
+
+    if (added.length > 0) {
+      setActiveId(added[added.length - 1]!.id);
     } else {
       setActiveId((current) => {
         if (initial.some((q) => q.id === current)) return current;
         return initial[0]?.id ?? "";
       });
     }
-    prevCountRef.current = initial.length;
+
+    prevIdsRef.current = new Set(initial.map((q) => q.id));
     // Only resync from the server when the question set changes (add/delete/reorder).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `initial` is read when `questionIds` changes
   }, [questionIds]);

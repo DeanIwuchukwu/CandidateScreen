@@ -20,6 +20,14 @@ function toggleByLabel(page: Page, label: string) {
   return page.getByText(label, { exact: true }).locator("xpath=..").getByRole("switch");
 }
 
+function editingQuestion(page: Page, index: number) {
+  return page.getByText(new RegExp(`editing question ${index}`, "i"));
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 test.describe("Build interview", () => {
   test("add question increases the question count", async ({ page }) => {
     await openNewInterviewBuilder(page, uniqueLabel("E2E Add Question"));
@@ -32,25 +40,25 @@ test.describe("Build interview", () => {
     await page.getByRole("button", { name: /add a question/i }).click();
 
     await expect.poll(() => readQuestionCount(page), { timeout: 20_000 }).toBe(before + 1);
-    await expect(page.getByText("Editing question 2")).toBeVisible();
+    await expect(editingQuestion(page, 2)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("button", { name: /Question 2: New question/i })).toBeVisible();
   });
 
   test("editing question text updates the list card live", async ({ page }) => {
     await openNewInterviewBuilder(page, uniqueLabel("E2E Edit Text"));
     await page.getByRole("button", { name: /add a question/i }).click();
-    await expect(page.getByText("Editing question 2")).toBeVisible();
+    await expect(editingQuestion(page, 2)).toBeVisible({ timeout: 20_000 });
 
-    const customText = `What motivates you at work? ${Date.now()}`;
+    const customText = `What motivates you at work ${Date.now()}`;
     await page.getByRole("textbox", { name: /question text/i }).fill(customText);
 
     await expect(
-      page.getByRole("button", { name: new RegExp(`Question 2: ${customText}`) }),
+      page.getByRole("button", { name: new RegExp(`Question 2: ${escapeRegExp(customText)}`) }),
     ).toBeVisible();
 
     await page.getByRole("textbox", { name: /question text/i }).blur();
     await page.reload();
-    await expect(page.getByRole("button", { name: new RegExp(customText) })).toBeVisible();
+    await expect(page.getByRole("button", { name: new RegExp(escapeRegExp(customText)) })).toBeVisible();
   });
 
   test("switching questions shows the correct editor content", async ({ page }) => {
@@ -59,15 +67,17 @@ test.describe("Build interview", () => {
     await page.getByRole("textbox", { name: /question text/i }).fill(q1Text);
 
     await page.getByRole("button", { name: /add a question/i }).click();
+    await expect(editingQuestion(page, 2)).toBeVisible({ timeout: 20_000 });
+
     const q2Text = `Question two ${Date.now()}`;
     await page.getByRole("textbox", { name: /question text/i }).fill(q2Text);
 
-    await page.getByRole("button", { name: new RegExp(`Question 1: ${q1Text}`) }).click();
-    await expect(page.getByText("Editing question 1")).toBeVisible();
+    await page.getByRole("button", { name: new RegExp(`Question 1: ${escapeRegExp(q1Text)}`) }).click();
+    await expect(editingQuestion(page, 1)).toBeVisible();
     await expect(page.getByRole("textbox", { name: /question text/i })).toHaveValue(q1Text);
 
-    await page.getByRole("button", { name: new RegExp(`Question 2: ${q2Text}`) }).click();
-    await expect(page.getByText("Editing question 2")).toBeVisible();
+    await page.getByRole("button", { name: new RegExp(`Question 2: ${escapeRegExp(q2Text)}`) }).click();
+    await expect(editingQuestion(page, 2)).toBeVisible();
     await expect(page.getByRole("textbox", { name: /question text/i })).toHaveValue(q2Text);
   });
 

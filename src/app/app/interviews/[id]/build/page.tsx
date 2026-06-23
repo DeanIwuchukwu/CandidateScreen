@@ -49,11 +49,7 @@ export default async function BuildInterviewPage({
             <SectionLabel>Questions · {interview.questions.length}</SectionLabel>
             <span className="text-[12.5px] font-semibold text-faint">≈ {totalMin} min total</span>
           </div>
-          <QuestionBuilder
-            key={interview.questions.map((q) => q.id).join("-")}
-            interviewId={id}
-            questions={interview.questions}
-          />
+          <QuestionBuilder interviewId={id} questions={interview.questions} />
           <div className="mt-3">
             <AddQuestionButton interviewId={id} />
           </div>

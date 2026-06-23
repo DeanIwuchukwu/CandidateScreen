@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { pageRange, type PaginatedResult } from "@/lib/recruiter/pagination";
 
 export function SearchField({
   placeholder,
@@ -349,5 +350,68 @@ export function ToggleSwitch({
         )}
       />
     </button>
+  );
+}
+
+export function TablePagination({
+  pagination,
+  basePath,
+  query = {},
+}: {
+  pagination: Pick<PaginatedResult<unknown>, "page" | "pageSize" | "total" | "totalPages">;
+  basePath: string;
+  query?: Record<string, string | undefined>;
+}) {
+  const { page, pageSize, total, totalPages } = pagination;
+  if (totalPages <= 1) return null;
+
+  const { start, end } = pageRange(page, pageSize, total);
+
+  function hrefFor(nextPage: number) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value) params.set(key, value);
+    }
+    if (nextPage > 1) params.set("page", String(nextPage));
+    else params.delete("page");
+    const qs = params.toString();
+    return qs ? `${basePath}?${qs}` : basePath;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline-2 bg-paper-2 px-[22px] py-3">
+      <span className="text-[12.5px] font-medium text-faint">
+        Showing {start}–{end} of {total}
+      </span>
+      <div className="flex items-center gap-2">
+        {page > 1 ? (
+          <Link
+            href={hrefFor(page - 1)}
+            className="rounded-[9px] border border-[#E4DDCD] bg-white px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:bg-paper-2"
+          >
+            Previous
+          </Link>
+        ) : (
+          <span className="rounded-[9px] border border-hairline-2 px-3 py-1.5 text-[12.5px] font-semibold text-faint-2">
+            Previous
+          </span>
+        )}
+        <span className="text-[12.5px] font-semibold text-muted">
+          Page {page} of {totalPages}
+        </span>
+        {page < totalPages ? (
+          <Link
+            href={hrefFor(page + 1)}
+            className="rounded-[9px] border border-[#E4DDCD] bg-white px-3 py-1.5 text-[12.5px] font-semibold text-muted hover:bg-paper-2"
+          >
+            Next
+          </Link>
+        ) : (
+          <span className="rounded-[9px] border border-hairline-2 px-3 py-1.5 text-[12.5px] font-semibold text-faint-2">
+            Next
+          </span>
+        )}
+      </div>
+    </div>
   );
 }

@@ -154,6 +154,40 @@ export async function deleteQuestionAction(questionId: string, interviewId: stri
   revalidatePath(`/app/interviews/${interviewId}/build`);
 }
 
+export async function deleteInterviewAction(
+  interviewId: string,
+): Promise<{ ok: true } | { ok: false; error: "not_found" | "has_responses" }> {
+  if (isDevBypass()) {
+    revalidatePath("/app/interviews");
+    revalidatePath("/app/candidates");
+    return { ok: true };
+  }
+
+  const { workspace } = await workspaceGuard();
+  const interview = await prisma.interview.findFirst({
+    where: { id: interviewId, workspaceId: workspace.id },
+    include: {
+      invites: {
+        include: { response: { select: { submittedAt: true } } },
+      },
+    },
+  });
+
+  if (!interview) return { ok: false, error: "not_found" };
+
+  const hasResponses = interview.invites.some(
+    (invite) => invite.response?.submittedAt != null,
+  );
+  if (hasResponses) return { ok: false, error: "has_responses" };
+
+  await prisma.interview.delete({ where: { id: interviewId } });
+
+  revalidatePath("/app/interviews");
+  revalidatePath("/app/candidates");
+  revalidatePath("/app/analytics");
+  return { ok: true };
+}
+
 export async function publishInterviewAction(interviewId: string) {
   if (isDevBypass()) return { token: "demo-invite-token" };
   const { workspace } = await workspaceGuard();

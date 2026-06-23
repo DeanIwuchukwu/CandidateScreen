@@ -2,6 +2,12 @@ import { prisma } from "@/lib/db";
 import type { CandidateStage, InterviewStatus } from "@prisma/client";
 import { isDevBypass } from "@/lib/dev/bypass";
 import {
+  buildPaginatedResult,
+  paginateArray,
+  parsePage,
+  TABLE_PAGE_SIZE,
+} from "@/lib/recruiter/pagination";
+import {
   MOCK_USER,
   MOCK_WORKSPACE_MEMBERS,
   mockActiveInterviews,
@@ -118,14 +124,72 @@ export async function getInterviews(workspaceId: string, status?: InterviewStatu
       workspaceId,
       ...(status ? { status } : {}),
     },
-    include: {
-      owner: true,
-      questions: true,
-      _count: { select: { invites: true } },
-      invites: { where: { status: "COMPLETED" }, select: { id: true } },
-    },
+    include: interviewListInclude,
     orderBy: { updatedAt: "desc" },
   });
+}
+
+const interviewListInclude = {
+  owner: true,
+  questions: true,
+  _count: { select: { invites: true } },
+  invites: { where: { status: "COMPLETED" as const }, select: { id: true } },
+};
+
+export async function getInterviewTabCounts(workspaceId: string) {
+  if (isDevBypass()) {
+    const all = mockInterviewsList();
+    return {
+      All: all.length,
+      Active: all.filter((i) => i.status === "ACTIVE").length,
+      Draft: all.filter((i) => i.status === "DRAFT").length,
+      Closed: all.filter((i) => i.status === "CLOSED").length,
+    };
+  }
+
+  const rows = await prisma.interview.groupBy({
+    by: ["status"],
+    where: { workspaceId },
+    _count: { _all: true },
+  });
+  const byStatus = Object.fromEntries(rows.map((row) => [row.status, row._count._all]));
+  const all = rows.reduce((sum, row) => sum + row._count._all, 0);
+
+  return {
+    All: all,
+    Active: byStatus.ACTIVE ?? 0,
+    Draft: byStatus.DRAFT ?? 0,
+    Closed: byStatus.CLOSED ?? 0,
+  };
+}
+
+export async function getInterviewsPaginated(
+  workspaceId: string,
+  opts: { status?: InterviewStatus; page?: number } = {},
+) {
+  const page = parsePage(opts.page);
+
+  if (isDevBypass()) {
+    return paginateArray(mockInterviewsList(opts.status), page, TABLE_PAGE_SIZE);
+  }
+
+  const where = {
+    workspaceId,
+    ...(opts.status ? { status: opts.status } : {}),
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.interview.findMany({
+      where,
+      include: interviewListInclude,
+      orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * TABLE_PAGE_SIZE,
+      take: TABLE_PAGE_SIZE,
+    }),
+    prisma.interview.count({ where }),
+  ]);
+
+  return buildPaginatedResult(items, total, page, TABLE_PAGE_SIZE);
 }
 
 export async function getInterview(workspaceId: string, interviewId: string) {
@@ -181,6 +245,53 @@ export async function getCandidateRoles(workspaceId: string) {
   );
 
   return roles;
+}
+
+export async function getCandidateRolesPaginated(workspaceId: string, page = 1) {
+  if (isDevBypass()) {
+    return paginateArray(mockCandidateRoles(), parsePage(page), TABLE_PAGE_SIZE);
+  }
+
+  const safePage = parsePage(page);
+  const where = { workspaceId, status: { in: ["ACTIVE", "CLOSED"] as InterviewStatus[] } };
+
+  const [interviews, total] = await Promise.all([
+    prisma.interview.findMany({
+      where,
+      include: {
+        _count: { select: { invites: true } },
+        invites: {
+          where: { status: "COMPLETED" },
+          select: { id: true },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      skip: (safePage - 1) * TABLE_PAGE_SIZE,
+      take: TABLE_PAGE_SIZE,
+    }),
+    prisma.interview.count({ where }),
+  ]);
+
+  const items = await Promise.all(
+    interviews.map(async (interview) => {
+      const toReview = await prisma.candidateResponse.count({
+        where: {
+          stage: "TO_REVIEW",
+          invite: { interviewId: interview.id },
+        },
+      });
+      return {
+        id: interview.id,
+        title: interview.title,
+        status: interview.status,
+        invited: interview._count.invites,
+        responded: interview.invites.length,
+        toReview,
+      };
+    }),
+  );
+
+  return buildPaginatedResult(items, total, safePage, TABLE_PAGE_SIZE);
 }
 
 export async function getCandidateStageCounts(
@@ -240,6 +351,48 @@ export async function getCandidates(
   });
 }
 
+export async function getCandidatesPaginated(
+  workspaceId: string,
+  opts: { stage?: CandidateStage; interviewId?: string; page?: number } = {},
+) {
+  const page = parsePage(opts.page);
+
+  if (isDevBypass()) {
+    return paginateArray(
+      mockCandidates(opts.stage, opts.interviewId),
+      page,
+      TABLE_PAGE_SIZE,
+    );
+  }
+
+  const where = {
+    ...(opts.stage ? { stage: opts.stage } : {}),
+    invite: {
+      interview: {
+        workspaceId,
+        ...(opts.interviewId ? { id: opts.interviewId } : {}),
+      },
+    },
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.candidateResponse.findMany({
+      where,
+      include: {
+        invite: { include: { interview: true } },
+        answers: true,
+        rubricRatings: true,
+      },
+      orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * TABLE_PAGE_SIZE,
+      take: TABLE_PAGE_SIZE,
+    }),
+    prisma.candidateResponse.count({ where }),
+  ]);
+
+  return buildPaginatedResult(items, total, page, TABLE_PAGE_SIZE);
+}
+
 export async function getReviewQueueIds(workspaceId: string, interviewId?: string) {
   const candidates = await getCandidates(workspaceId, {
     stage: "TO_REVIEW",
@@ -264,8 +417,8 @@ export async function getCandidateResponse(workspaceId: string, responseId: stri
   });
 }
 
-export async function getAnalytics(workspaceId: string) {
-  if (isDevBypass()) return mockAnalytics();
+export async function getAnalytics(workspaceId: string, roleStatsPage = 1) {
+  if (isDevBypass()) return mockAnalytics(roleStatsPage);
 
   const invites = await prisma.invite.findMany({
     where: { interview: { workspaceId } },
@@ -304,7 +457,7 @@ export async function getAnalytics(workspaceId: string) {
     },
   });
 
-  const roleStats = byRole.map((r) => {
+  const allRoleStats = byRole.map((r) => {
     const invited = r.invites.length;
     const done = r.invites.filter((i) => i.status === "COMPLETED").length;
     return {
@@ -314,6 +467,8 @@ export async function getAnalytics(workspaceId: string) {
       avgScore: 3.8,
     };
   });
+
+  const roleStats = paginateArray(allRoleStats, parsePage(roleStatsPage), TABLE_PAGE_SIZE);
 
   const completionTrend = [
     { week: "W1", rate: 72 },

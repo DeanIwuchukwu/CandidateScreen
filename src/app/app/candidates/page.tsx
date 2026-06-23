@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { Plus } from "lucide-react";
 import { requireSessionUser } from "@/lib/auth/session";
 import {
-  getCandidates,
-  getCandidateRoles,
+  getCandidatesPaginated,
+  getCandidateRolesPaginated,
   getCandidateStageCounts,
   getInterview,
   getUserWorkspace,
 } from "@/lib/recruiter/queries";
+import { parsePage } from "@/lib/recruiter/pagination";
 import { formatRelativeTime } from "@/lib/recruiter/format";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/ui/star-rating";
@@ -26,6 +27,7 @@ import {
   TABLE_GRID_PIPELINE,
   TABLE_GRID_ROLES,
   TableHeader,
+  TablePagination,
 } from "@/components/recruiter/recruiter-ui";
 import type { CandidateStage, InterviewStatus } from "@prisma/client";
 
@@ -37,7 +39,9 @@ const stages: Array<{ key: CandidateStage | "ALL"; label: string }> = [
   { key: "ALL", label: "All" },
 ];
 
-type CandidateRow = Awaited<ReturnType<typeof getCandidates>>[number] & {
+type CandidateRow = Awaited<
+  ReturnType<typeof getCandidatesPaginated>
+>["items"][number] & {
   statusLabel?: string;
   avatar?: { initials: string; color: string };
   durationMin?: number | null;
@@ -53,35 +57,38 @@ function pipelineUrl(interviewId: string, stage?: string) {
 export default async function CandidatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ interview?: string; stage?: string }>;
+  searchParams: Promise<{ interview?: string; stage?: string; page?: string }>;
 }) {
   const user = await requireSessionUser();
   const { workspace } = await getUserWorkspace(user.id);
-  const { interview: interviewId, stage = "TO_REVIEW" } = await searchParams;
+  const { interview: interviewId, stage = "TO_REVIEW", page: pageParam } =
+    await searchParams;
+  const page = parsePage(pageParam);
 
   if (!interviewId) {
-    return <CandidatesRoleIndex workspaceId={workspace.id} />;
+    return <CandidatesRoleIndex workspaceId={workspace.id} page={page} />;
   }
 
   const interview = await getInterview(workspace.id, interviewId);
   if (!interview) notFound();
 
-  const [candidates, counts] = await Promise.all([
-    getCandidates(workspace.id, {
+  const [candidatesPage, counts] = await Promise.all([
+    getCandidatesPaginated(workspace.id, {
       interviewId,
       stage: stage === "ALL" ? undefined : (stage as CandidateStage),
+      page,
     }),
     getCandidateStageCounts(workspace.id, interviewId),
   ]);
 
-  const rows = candidates as CandidateRow[];
+  const rows = candidatesPage.items as CandidateRow[];
   const roleTitle = interview.title;
   const invited =
     "_count" in interview && interview._count
       ? (interview._count as { invites: number }).invites
       : 0;
 
-  if (rows.length === 0 && stage === "TO_REVIEW") {
+  if (counts.TO_REVIEW === 0 && stage === "TO_REVIEW" && page === 1) {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center p-8 text-center">
         <div className="relative mb-6 grid h-[88px] w-[88px] place-items-center rounded-[22px] bg-paper-2">
@@ -239,21 +246,33 @@ export default async function CandidatesPage({
               </div>
             );
           })}
+          <TablePagination
+            pagination={candidatesPage}
+            basePath="/app/candidates"
+            query={{ interview: interviewId, stage }}
+          />
         </div>
       </div>
     </>
   );
 }
 
-async function CandidatesRoleIndex({ workspaceId }: { workspaceId: string }) {
-  const roles = await getCandidateRoles(workspaceId);
+async function CandidatesRoleIndex({
+  workspaceId,
+  page,
+}: {
+  workspaceId: string;
+  page: number;
+}) {
+  const rolesPage = await getCandidateRolesPaginated(workspaceId, page);
+  const roles = rolesPage.items;
   const totalToReview = roles.reduce((sum, r) => sum + r.toReview, 0);
 
   return (
     <>
       <PageHeader
         title="Candidates"
-        subtitle={`${roles.length} roles · ${totalToReview} awaiting review`}
+        subtitle={`${rolesPage.total} roles · ${totalToReview} awaiting review`}
       />
 
       <div className="px-8 pb-7 pt-[18px]">
@@ -294,6 +313,7 @@ async function CandidatesRoleIndex({ workspaceId }: { workspaceId: string }) {
               <div className="text-right text-lg font-bold text-faint-2">›</div>
             </Link>
           ))}
+          <TablePagination pagination={rolesPage} basePath="/app/candidates" />
         </div>
       </div>
     </>

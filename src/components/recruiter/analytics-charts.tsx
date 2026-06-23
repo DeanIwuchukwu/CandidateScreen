@@ -9,7 +9,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { SectionLabel } from "@/components/recruiter/recruiter-ui";
+import { SectionLabel, TablePagination } from "@/components/recruiter/recruiter-ui";
+import type { PaginatedResult } from "@/lib/recruiter/pagination";
 
 const FUNNEL_COLORS = ["#1C6B47", "#2C8159", "#3C9568", "#6BA98A", "#9CC4AF"];
 
@@ -22,7 +23,12 @@ export function AnalyticsCharts({
   funnel: Array<{ label: string; count: number; pct: number }>;
   completionTrend: Array<{ week: string; rate: number }>;
   dropOff: Array<{ question: string; rate: number }>;
-  roleStats: Array<{ title: string; invited: number; completion: number; avgScore: number }>;
+  roleStats: PaginatedResult<{
+    title: string;
+    invited: number;
+    completion: number;
+    avgScore: number;
+  }>;
 }) {
   return (
     <>
@@ -92,10 +98,10 @@ export function AnalyticsCharts({
             <span>Completion</span>
             <span>Avg score</span>
           </div>
-          {roleStats.map((r, i) => (
+          {roleStats.items.map((r, i) => (
             <div
               key={r.title}
-              className={`grid items-center gap-3 px-[22px] py-3.5 text-[13.5px] font-semibold ${i < roleStats.length - 1 ? "border-b border-hairline-2" : ""}`}
+              className={`grid items-center gap-3 px-[22px] py-3.5 text-[13.5px] font-semibold ${i < roleStats.items.length - 1 ? "border-b border-hairline-2" : ""}`}
               style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr" }}
             >
               <span>{r.title}</span>
@@ -104,6 +110,7 @@ export function AnalyticsCharts({
               <span className="text-muted">{r.avgScore}</span>
             </div>
           ))}
+          <TablePagination pagination={roleStats} basePath="/app/analytics" />
         </div>
 
         <div className="rounded-2xl border border-hairline p-6">

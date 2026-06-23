@@ -1,5 +1,7 @@
 import type { InvitePayload } from "@/lib/types";
 
+import { paginateArray, parsePage, TABLE_PAGE_SIZE } from "@/lib/recruiter/pagination";
+
 const now = new Date();
 
 export const MOCK_USER = {
@@ -720,7 +722,14 @@ export function mockCandidateResponse(responseId: string) {
   };
 }
 
-export function mockAnalytics() {
+export function mockAnalytics(roleStatsPage = 1) {
+  const allRoleStats = [
+      { title: "Product Designer", invited: 32, completion: 91, avgScore: 4.1 },
+      { title: "Frontend Engineer", invited: 24, completion: 83, avgScore: 3.7 },
+      { title: "Customer Success Lead", invited: 23, completion: 85, avgScore: 3.6 },
+      { title: "Data Analyst", invited: 16, completion: 81, avgScore: 3.9 },
+    ];
+
   return {
     kpis: {
       invites: 95,
@@ -739,12 +748,7 @@ export function mockAnalytics() {
       { label: "Reviewed", count: 54, pct: 57 },
       { label: "Advanced", count: 23, pct: 24 },
     ],
-    roleStats: [
-      { title: "Product Designer", invited: 32, completion: 91, avgScore: 4.1 },
-      { title: "Frontend Engineer", invited: 24, completion: 83, avgScore: 3.7 },
-      { title: "Customer Success Lead", invited: 23, completion: 85, avgScore: 3.6 },
-      { title: "Data Analyst", invited: 16, completion: 81, avgScore: 3.9 },
-    ],
+    roleStats: paginateArray(allRoleStats, parsePage(roleStatsPage), TABLE_PAGE_SIZE),
     completionTrend: [
       { week: "W1", rate: 72 }, { week: "W2", rate: 78 }, { week: "W3", rate: 81 },
       { week: "W4", rate: 79 }, { week: "W5", rate: 84 }, { week: "W6", rate: 86 },

@@ -35,7 +35,7 @@ export default defineConfig({
     },
     {
       name: "authenticated",
-      testMatch: /(recruiter-console|build-interview)\.spec\.ts/,
+      testMatch: /(recruiter-console|build-interview|interviews)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: "e2e/.auth/user.json",

@@ -1,12 +1,18 @@
 import { requireSessionUser } from "@/lib/auth/session";
 import { getAnalytics, getUserWorkspace } from "@/lib/recruiter/queries";
+import { parsePage } from "@/lib/recruiter/pagination";
 import { AnalyticsCharts } from "@/components/recruiter/analytics-charts";
 import { FilterButton } from "@/components/recruiter/recruiter-ui";
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await requireSessionUser();
   const { workspace } = await getUserWorkspace(user.id);
-  const data = await getAnalytics(workspace.id);
+  const { page: pageParam } = await searchParams;
+  const data = await getAnalytics(workspace.id, parsePage(pageParam));
   const kpis = data.kpis as typeof data.kpis & {
     invitesDelta?: number;
     completionDelta?: number;

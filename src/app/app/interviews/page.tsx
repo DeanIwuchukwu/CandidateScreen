@@ -1,35 +1,70 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireSessionUser } from "@/lib/auth/session";
-import { getInterviews, getUserWorkspace } from "@/lib/recruiter/queries";
-import { formatInterviewMeta } from "@/lib/recruiter/format";
+import {
+  getInterviewTabCounts,
+  getInterviewsPaginated,
+  getUserWorkspace,
+} from "@/lib/recruiter/queries";
+import { parsePage } from "@/lib/recruiter/pagination";
 import { Button } from "@/components/ui/button";
 import {
+  InterviewListRow,
+  type InterviewListRowData,
+} from "@/components/recruiter/interview-list-row";
+import {
   CountTabs,
-  InterviewStatusDot,
-  OwnerCell,
   PageHeader,
-  ResponseProgress,
   SearchField,
   SortLabel,
   TABLE_GRID_STANDARD,
   TableHeader,
+  TablePagination,
 } from "@/components/recruiter/recruiter-ui";
 
 const tabs = ["All", "Active", "Draft", "Closed"] as const;
 
-type InterviewRow = Awaited<ReturnType<typeof getInterviews>>[number] & {
+type InterviewRow = Awaited<
+  ReturnType<typeof getInterviewsPaginated>
+>["items"][number] & {
   ownerMeta?: { firstName: string; initials: string; color: string };
 };
+
+function toListRow(interview: InterviewRow): InterviewListRowData {
+  const owner = interview.ownerMeta ?? {
+    firstName: interview.owner.name.split(" ")[0]!,
+    initials: interview.owner.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase(),
+    color: "#1C6B47",
+  };
+
+  return {
+    id: interview.id,
+    title: interview.title,
+    status: interview.status,
+    createdAt: interview.createdAt.toISOString(),
+    updatedAt: interview.updatedAt.toISOString(),
+    questionCount: interview.questions.length,
+    invited: interview._count.invites,
+    responded: interview.invites.length,
+    hasCandidateResponses: interview.invites.length > 0,
+    owner,
+  };
+}
 
 export default async function InterviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string }>;
 }) {
   const user = await requireSessionUser();
   const { workspace } = await getUserWorkspace(user.id);
-  const { tab = "All" } = await searchParams;
+  const { tab = "All", page: pageParam } = await searchParams;
+  const page = parsePage(pageParam);
 
   const statusMap = {
     Active: "ACTIVE",
@@ -37,27 +72,21 @@ export default async function InterviewsPage({
     Closed: "CLOSED",
   } as const;
 
-  const allInterviews = (await getInterviews(workspace.id)) as InterviewRow[];
-  const interviews = (
-    tab in statusMap
-      ? await getInterviews(workspace.id, statusMap[tab as keyof typeof statusMap])
-      : allInterviews
-  ) as InterviewRow[];
+  const [counts, interviewsPage] = await Promise.all([
+    getInterviewTabCounts(workspace.id),
+    getInterviewsPaginated(workspace.id, {
+      status: tab in statusMap ? statusMap[tab as keyof typeof statusMap] : undefined,
+      page,
+    }),
+  ]);
 
-  const counts = {
-    All: allInterviews.length,
-    Active: allInterviews.filter((i) => i.status === "ACTIVE").length,
-    Draft: allInterviews.filter((i) => i.status === "DRAFT").length,
-    Closed: allInterviews.filter((i) => i.status === "CLOSED").length,
-  };
-
-  const activeCount = counts.Active;
+  const interviews = interviewsPage.items as InterviewRow[];
 
   return (
     <>
       <PageHeader
         title="Interviews"
-        subtitle={`${counts.All} interviews · ${activeCount} active`}
+        subtitle={`${counts.All} interviews · ${counts.Active} active`}
         actions={
           <Link href="/app/interviews/new">
             <Button size="sm">
@@ -89,71 +118,14 @@ export default async function InterviewsPage({
             columns={["Interview", "Status", "Responses", "Owner", ""]}
             gridTemplate={TABLE_GRID_STANDARD}
           />
-          {interviews.map((interview) => {
-            const responded = interview.invites.length;
-            const invited = interview._count.invites;
-            const owner = interview.ownerMeta ?? {
-              firstName: interview.owner.name.split(" ")[0]!,
-              initials: interview.owner.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase(),
-              color: "#1C6B47",
-            };
-            const mutedTitle = interview.status === "CLOSED";
-
-            const href =
-              interview.status === "DRAFT"
-                ? `/app/interviews/${interview.id}/build`
-                : `/app/candidates?interview=${interview.id}`;
-
-            return (
-              <Link
-                key={interview.id}
-                href={href}
-                className="grid items-center gap-4 border-b border-hairline-2 px-[22px] py-[15px] last:border-0 hover:bg-reviewed"
-                style={{ gridTemplateColumns: TABLE_GRID_STANDARD }}
-              >
-                <div>
-                  <div
-                    className={`text-[14.5px] font-semibold ${mutedTitle ? "text-muted" : "text-ink"}`}
-                  >
-                    {interview.title}
-                  </div>
-                  <div className="text-xs font-medium text-faint">
-                    {formatInterviewMeta(
-                      interview.status,
-                      interview.createdAt,
-                      interview.updatedAt,
-                      interview.questions.length,
-                    )}
-                  </div>
-                </div>
-                <InterviewStatusDot status={interview.status} />
-                <div>
-                  {interview.status === "DRAFT" ? (
-                    <span className="text-[13px] font-medium text-faint-2">
-                      Not published
-                    </span>
-                  ) : (
-                    <ResponseProgress
-                      responded={responded}
-                      invited={invited}
-                      closed={interview.status === "CLOSED"}
-                    />
-                  )}
-                </div>
-                <OwnerCell
-                  name={owner.firstName}
-                  initials={owner.initials}
-                  color={owner.color}
-                />
-                <div className="text-right text-lg font-bold text-faint-2">⋯</div>
-              </Link>
-            );
-          })}
+          {interviews.map((interview) => (
+            <InterviewListRow key={interview.id} interview={toListRow(interview)} />
+          ))}
+          <TablePagination
+            pagination={interviewsPage}
+            basePath="/app/interviews"
+            query={{ tab }}
+          />
         </div>
       </div>
     </>

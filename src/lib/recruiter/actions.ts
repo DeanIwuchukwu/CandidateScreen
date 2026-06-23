@@ -5,10 +5,30 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireSessionUser } from "@/lib/auth/session";
 import { getUserWorkspace } from "@/lib/recruiter/queries";
-import type { CandidateDecision, CandidateStage } from "@prisma/client";
+import type { CandidateDecision, CandidateStage, Prisma } from "@prisma/client";
 import { RUBRIC_CRITERIA } from "@/lib/types";
 import { isDevBypass } from "@/lib/dev/bypass";
 import { MOCK_USER } from "@/lib/dev/mock-data";
+
+/** Avoid @@unique([interviewId, order]) collisions when reassigning order values. */
+async function applyQuestionOrder(
+  tx: Prisma.TransactionClient,
+  interviewId: string,
+  orderedIds: string[],
+) {
+  for (let i = 0; i < orderedIds.length; i++) {
+    await tx.question.updateMany({
+      where: { id: orderedIds[i], interviewId },
+      data: { order: 10_000 + i },
+    });
+  }
+  for (let i = 0; i < orderedIds.length; i++) {
+    await tx.question.updateMany({
+      where: { id: orderedIds[i], interviewId },
+      data: { order: i },
+    });
+  }
+}
 
 async function workspaceGuard() {
   const user = await requireSessionUser();
@@ -121,11 +141,7 @@ export async function reorderQuestionsAction(interviewId: string, orderedIds: st
   });
   if (!interview) return;
 
-  await Promise.all(
-    orderedIds.map((id, order) =>
-      prisma.question.updateMany({ where: { id, interviewId }, data: { order } }),
-    ),
-  );
+  await prisma.$transaction((tx) => applyQuestionOrder(tx, interviewId, orderedIds));
   revalidatePath(`/app/interviews/${interviewId}/build`);
 }
 
@@ -144,12 +160,14 @@ export async function deleteQuestionAction(questionId: string, interviewId: stri
   const question = interview.questions.find((q) => q.id === questionId);
   if (!question) return;
 
-  await prisma.question.delete({ where: { id: questionId } });
+  const remainingIds = interview.questions
+    .filter((q) => q.id !== questionId)
+    .map((q) => q.id);
 
-  const remaining = interview.questions.filter((q) => q.id !== questionId);
-  await Promise.all(
-    remaining.map((q, order) => prisma.question.update({ where: { id: q.id }, data: { order } })),
-  );
+  await prisma.$transaction(async (tx) => {
+    await tx.question.delete({ where: { id: questionId } });
+    await applyQuestionOrder(tx, interviewId, remainingIds);
+  });
 
   revalidatePath(`/app/interviews/${interviewId}/build`);
 }

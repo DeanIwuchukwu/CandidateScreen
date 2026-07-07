@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { updateInterviewAction } from "@/lib/recruiter/actions";
 import { Button } from "@/components/ui/button";
+import { InterviewRoleSelector } from "@/components/recruiter/interview-role-selector";
 import { SectionLabel, ToggleSwitch } from "@/components/recruiter/recruiter-ui";
+import type { JobRoleOption } from "@/lib/jobs/queries";
 
 type InterviewSettings = {
   id: string;
   title: string;
+  jobId: string | null;
   welcomeMessage: string | null;
   deadlineDays: number;
   allowRetakes: boolean;
@@ -23,7 +26,13 @@ function deadlineOptions(current: number) {
     : [...DEADLINE_OPTIONS, current].sort((a, b) => a - b);
 }
 
-export function InterviewSettingsForm({ interview }: { interview: InterviewSettings }) {
+export function InterviewSettingsForm({
+  interview,
+  jobs,
+}: {
+  interview: InterviewSettings;
+  jobs: JobRoleOption[];
+}) {
   const [allowRetakes, setAllowRetakes] = useState(interview.allowRetakes);
   const [autoTranscripts, setAutoTranscripts] = useState(interview.autoTranscripts);
   const [requireIdCheck, setRequireIdCheck] = useState(interview.requireIdCheck);
@@ -33,14 +42,12 @@ export function InterviewSettingsForm({ interview }: { interview: InterviewSetti
   return (
     <form action={updateWithId} className="flex flex-col gap-[22px] bg-paper-2 px-[26px] py-[26px]">
       <SectionLabel>Interview settings</SectionLabel>
-      <label className="block text-[12.5px] font-semibold text-muted">
-        Role
-        <input
-          name="title"
-          defaultValue={interview.title}
-          className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] bg-white px-3 py-2.5 text-sm font-medium"
-        />
-      </label>
+      <InterviewRoleSelector
+        jobs={jobs}
+        defaultJobId={interview.jobId}
+        defaultTitle={interview.title}
+        showHint={false}
+      />
       <label className="block text-[12.5px] font-semibold text-muted">
         Deadline to respond
         <div className="relative mt-1.5">

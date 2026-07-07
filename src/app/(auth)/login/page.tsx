@@ -5,7 +5,13 @@ import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; reset?: string }>;
+}) {
+  const { error, reset } = await searchParams;
+
   return (
     <div className="grid min-h-screen lg:grid-cols-[.92fr_1.08fr]">
       <AuthBrandPanel
@@ -26,6 +32,18 @@ export default function LoginPage() {
         <div className="w-full max-w-[368px]">
           <h1 className="font-display text-[30px] font-medium leading-tight">Welcome back</h1>
           <p className="mt-2 text-[14.5px] text-muted">Sign in to your Northwind workspace.</p>
+
+          {reset === "success" && (
+            <p className="mt-3 rounded-[10px] bg-primary-tint px-3 py-2.5 text-sm font-medium text-primary">
+              Password updated. You can sign in with your new password.
+            </p>
+          )}
+
+          {error === "invalid" && (
+            <p className="mt-3 text-sm font-medium text-pass" role="alert">
+              Invalid email or password.
+            </p>
+          )}
 
           <div className="mt-6">
             <OAuthButtons />

@@ -5,6 +5,7 @@ import {
   getReviewQueueIds,
   getUserWorkspace,
 } from "@/lib/recruiter/queries";
+import { resolveMediaUrl } from "@/lib/storage";
 import { ReviewPanel } from "@/components/recruiter/review-panel";
 import { RUBRIC_CRITERIA } from "@/lib/types";
 
@@ -29,6 +30,15 @@ export default async function ReviewPage({
     if (r) rubric[c] = r.rating;
   });
 
+  const answers = await Promise.all(
+    response.answers.map(async (a) => ({
+      questionId: a.questionId,
+      videoUrl: await resolveMediaUrl(a.videoUrl),
+      transcript: a.transcript,
+      durationSec: a.durationSec ?? undefined,
+    })),
+  );
+
   return (
     <ReviewPanel
       data={{
@@ -42,12 +52,7 @@ export default async function ReviewPage({
           order: q.order,
           text: q.text,
         })),
-        answers: response.answers.map((a) => ({
-          questionId: a.questionId,
-          videoUrl: a.videoUrl,
-          transcript: a.transcript,
-          durationSec: a.durationSec ?? undefined,
-        })),
+        answers,
         rubric,
         queueIds,
         queueIndex: queueIndex >= 0 ? queueIndex : 0,

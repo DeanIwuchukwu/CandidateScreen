@@ -9,6 +9,7 @@ import type { CandidateDecision, CandidateStage, Prisma } from "@prisma/client";
 import { RUBRIC_CRITERIA } from "@/lib/types";
 import { isDevBypass } from "@/lib/dev/bypass";
 import { MOCK_USER } from "@/lib/dev/mock-data";
+import { resolveInterviewRoleFromForm } from "@/lib/recruiter/interview-role";
 
 /** Avoid @@unique([interviewId, order]) collisions when reassigning order values. */
 async function applyQuestionOrder(
@@ -46,12 +47,13 @@ async function workspaceGuard() {
 export async function createInterviewAction(formData: FormData) {
   if (isDevBypass()) redirect("/app/interviews/demo-interview/build");
   const { user, workspace } = await workspaceGuard();
-  const title = String(formData.get("title") || "Untitled interview");
+  const { title, jobId } = await resolveInterviewRoleFromForm(formData, workspace.id);
 
   const interview = await prisma.interview.create({
     data: {
       workspaceId: workspace.id,
       ownerId: user.id,
+      jobId,
       title,
       questions: {
         create: [
@@ -76,11 +78,13 @@ export async function updateInterviewAction(interviewId: string, formData: FormD
     return;
   }
   const { workspace } = await workspaceGuard();
+  const { title, jobId } = await resolveInterviewRoleFromForm(formData, workspace.id);
 
   await prisma.interview.updateMany({
     where: { id: interviewId, workspaceId: workspace.id },
     data: {
-      title: String(formData.get("title") || ""),
+      title,
+      jobId,
       welcomeMessage: String(formData.get("welcomeMessage") || "") || null,
       deadlineDays: Number(formData.get("deadlineDays") || 7),
       allowRetakes: formData.get("allowRetakes") === "on",
@@ -248,6 +252,7 @@ export async function saveReviewAction(
   const { workspace } = await workspaceGuard();
   const response = await prisma.candidateResponse.findFirst({
     where: { id: responseId, invite: { interview: { workspaceId: workspace.id } } },
+    include: { invite: true },
   });
   if (!response) return;
 
@@ -275,6 +280,11 @@ export async function saveReviewAction(
   }
 
   revalidatePath(`/app/candidates/${responseId}/review`);
+
+  if (data.decision === "ADVANCE" && response.inviteId) {
+    const { markApplicationPassedByInvite } = await import("@/lib/jobs/applications");
+    await markApplicationPassedByInvite(response.inviteId);
+  }
 }
 
 export async function updateWorkspaceAction(formData: FormData) {

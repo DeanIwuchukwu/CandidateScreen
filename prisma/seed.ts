@@ -23,6 +23,8 @@ async function main() {
   await prisma.answer.deleteMany();
   await prisma.rubricRating.deleteMany();
   await prisma.candidateResponse.deleteMany();
+  await prisma.jobApplication.deleteMany();
+  await prisma.job.deleteMany();
   await prisma.invite.deleteMany();
   await prisma.question.deleteMany();
   await prisma.interview.deleteMany();
@@ -116,10 +118,75 @@ async function main() {
     });
   }
 
+  const job = await prisma.job.create({
+    data: {
+      workspaceId: workspace.id,
+      ownerId: user.id,
+      title: "Product Designer",
+      department: "Design",
+      employmentType: "Full-time",
+      location: "Remote (EU)",
+      salaryRange: "€65k – €85k",
+      aboutRole:
+        "We're looking for a product designer to own end-to-end design for our onboarding and activation experience. You'll partner closely with engineering and product to ship work that thousands of new users touch every week.",
+      duties:
+        "Lead design for onboarding flows end to end\nRun lightweight research and turn it into decisions\nPartner with two engineers and a PM",
+      status: "OPEN",
+      publicSlug: "des-2f9",
+      listOnCareersPage: true,
+      applicationDeadline: new Date("2026-07-15"),
+      resumeEnabled: true,
+      portfolioEnabled: true,
+      phoneEnabled: false,
+      customQuestions: [],
+      publishedAt: new Date("2025-06-02"),
+    },
+  });
+
+  await prisma.interview.update({
+    where: { id: interview.id },
+    data: { jobId: job.id },
+  });
+
+  await prisma.jobApplication.createMany({
+    data: [
+      {
+        jobId: job.id,
+        name: "Aanya Bhatt",
+        email: "aanya.b@email.com",
+        resumeUrl: null,
+        portfolioUrl: "https://example.com",
+        stage: "APPLIED",
+        submittedAt: new Date(Date.now() - 2 * 3600000),
+      },
+      {
+        jobId: job.id,
+        name: "Marcus Owens",
+        email: "m.owens@email.com",
+        resumeUrl: null,
+        portfolioUrl: "https://example.com",
+        stage: "APPLIED",
+        submittedAt: new Date(Date.now() - 5 * 3600000),
+      },
+      {
+        jobId: job.id,
+        name: "Lena Hofer",
+        email: "lena.hofer@email.com",
+        resumeUrl: null,
+        portfolioUrl: "https://example.com",
+        stage: "INVITED",
+        inviteSentAt: new Date(Date.now() - 2 * 86400000),
+        submittedAt: new Date(Date.now() - 2 * 86400000),
+      },
+    ],
+  });
+
   console.info("Seed complete");
   console.info("Login: maya@northwind.com / password123");
   console.info("Candidate invite: /i/demo-invite-token");
   console.info("Review: /app/candidates/" + response.id + "/review");
+  console.info("Public job: /p/des-2f9");
+  console.info("Job applicants: /app/jobs/" + job.id);
 }
 
 main()

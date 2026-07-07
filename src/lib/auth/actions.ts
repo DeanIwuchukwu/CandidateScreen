@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { createToken, hashPassword, verifyPassword } from "@/lib/auth/crypto";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { isDevBypass } from "@/lib/dev/bypass";
+import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -23,11 +24,20 @@ const resetRequestSchema = z.object({
   email: z.string().email(),
 });
 
+const completeResetSchema = z.object({
+  password: z.string().min(8),
+  confirmPassword: z.string().min(8),
+});
+
 function slugify(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+function appUrl() {
+  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
 export async function loginAction(formData: FormData): Promise<void> {
@@ -94,6 +104,12 @@ export async function registerAction(formData: FormData): Promise<void> {
     },
   });
 
+  void sendWelcomeEmail({
+    to: user.email,
+    name: parsed.data.name,
+    companyName: parsed.data.company,
+  }).catch((err) => console.error("[email] welcome failed", err));
+
   await createSession(user.id);
   redirect("/app");
 }
@@ -112,24 +128,59 @@ export async function requestPasswordResetAction(formData: FormData): Promise<vo
     redirect("/reset?error=invalid");
   }
 
-  const token = createToken();
-  const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + 1);
+  const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
 
-  await prisma.passwordReset.deleteMany({ where: { email: parsed.data.email } });
-  await prisma.passwordReset.create({
-    data: {
-      email: parsed.data.email,
-      token,
-      expiresAt,
-    },
-  });
+  if (user) {
+    const token = createToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
 
-  if (process.env.NODE_ENV === "development") {
-    console.info(
-      `[password-reset] ${parsed.data.email} → ${process.env.NEXT_PUBLIC_APP_URL}/reset/${token}`,
+    await prisma.passwordReset.deleteMany({ where: { email: parsed.data.email } });
+    await prisma.passwordReset.create({
+      data: {
+        email: parsed.data.email,
+        token,
+        expiresAt,
+      },
+    });
+
+    const resetUrl = `${appUrl()}/reset/${token}`;
+    void sendPasswordResetEmail({ to: parsed.data.email, resetUrl }).catch((err) =>
+      console.error("[email] password reset failed", err),
     );
   }
 
   redirect("/reset?sent=1");
+}
+
+export async function completePasswordResetAction(
+  token: string,
+  formData: FormData,
+): Promise<void> {
+  const parsed = completeResetSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!parsed.success || parsed.data.password !== parsed.data.confirmPassword) {
+    redirect(`/reset/${token}?error=invalid`);
+  }
+
+  const reset = await prisma.passwordReset.findUnique({ where: { token } });
+  if (!reset || reset.expiresAt < new Date()) {
+    redirect(`/reset/${token}?error=expired`);
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: reset.email } });
+  if (!user) {
+    redirect(`/reset/${token}?error=expired`);
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: hashPassword(parsed.data.password) },
+  });
+  await prisma.passwordReset.delete({ where: { id: reset.id } });
+
+  redirect("/login?reset=success");
 }

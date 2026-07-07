@@ -5,6 +5,8 @@ import Link from "next/link";
 import { AlertCircle, Check, Clock } from "lucide-react";
 import type { InvitePayload, CandidatePhase } from "@/lib/types";
 import {
+  completeVideoUpload,
+  prepareVideoUpload,
   saveCandidateProgress,
   startCandidateSession,
   submitCandidateInterview,
@@ -38,6 +40,7 @@ function CandidateFlowInner({ data }: Props) {
   const [qIndex, setQIndex] = useState(data.progress.currentQuestionIndex);
   const [retakesUsed, setRetakesUsed] = useState(data.progress.retakesUsed);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [localBlob, setLocalBlob] = useState<Blob | null>(null);
 
   const question = data.questions[qIndex];
@@ -101,12 +104,55 @@ function CandidateFlowInner({ data }: Props) {
     const videoBlob = blob ?? localBlob;
     if (!videoBlob || !question) return;
     setUploading(true);
-    const fd = new FormData();
-    fd.append("video", videoBlob, "answer.webm");
-    fd.append("durationSec", String(elapsed || 1));
-    await uploadCandidateAnswer(data.token, question.id, fd);
+    setUploadError(null);
+
+    const durationSec = elapsed || 1;
+
+    try {
+      const prep = await prepareVideoUpload(data.token, question.id);
+      if (!prep.ok) {
+        setUploadError(prep.error ?? "Upload failed. Please try again.");
+        return;
+      }
+
+      if (prep.useR2 && prep.uploadUrl && prep.objectKey) {
+        const putRes = await fetch(prep.uploadUrl, {
+          method: "PUT",
+          body: videoBlob,
+          headers: { "Content-Type": "video/webm" },
+        });
+        if (!putRes.ok) {
+          setUploadError("Upload failed. Please try again.");
+          return;
+        }
+        const result = await completeVideoUpload(
+          data.token,
+          question.id,
+          prep.objectKey,
+          durationSec,
+        );
+        if (!result.ok) {
+          setUploadError(result.error ?? "Upload failed. Please try again.");
+          return;
+        }
+      } else {
+        const fd = new FormData();
+        fd.append("video", videoBlob, "answer.webm");
+        fd.append("durationSec", String(durationSec));
+        const result = await uploadCandidateAnswer(data.token, question.id, fd);
+        if (!result.ok) {
+          setUploadError(result.error ?? "Upload failed. Please try again.");
+          return;
+        }
+      }
+    } catch {
+      setUploadError("Upload failed. Please try again.");
+      return;
+    } finally {
+      setUploading(false);
+    }
+
     setLocalBlob(null);
-    setUploading(false);
 
     if (qIndex >= data.questions.length - 1) {
       await submitCandidateInterview(data.token);
@@ -461,6 +507,11 @@ function CandidateFlowInner({ data }: Props) {
             <Button className="mt-6 w-full" onClick={handleUseAnswer} disabled={!playback || uploading}>
               {uploading ? "Uploading…" : "Use this answer →"}
             </Button>
+            {uploadError && (
+              <p className="mt-2 text-center text-sm font-medium text-pass" role="alert">
+                {uploadError}
+              </p>
+            )}
             {data.interview.allowRetakes && (
               <Button
                 variant="secondary"

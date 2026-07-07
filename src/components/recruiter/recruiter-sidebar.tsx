@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Briefcase,
   LayoutGrid,
   ListVideo,
   Settings,
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/app", label: "Dashboard", icon: LayoutGrid, exact: true },
+  { href: "/app/jobs", label: "Jobs", icon: Briefcase },
   { href: "/app/interviews", label: "Interviews", icon: ListVideo },
   { href: "/app/candidates", label: "Candidates", icon: Users },
   { href: "/app/analytics", label: "Analytics", icon: BarChart3 },

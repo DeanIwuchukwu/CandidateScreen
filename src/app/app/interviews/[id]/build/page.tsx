@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSessionUser } from "@/lib/auth/session";
 import { getInterview, getUserWorkspace } from "@/lib/recruiter/queries";
+import { getJobsForRolePicker } from "@/lib/jobs/queries";
 import { QuestionBuilder } from "@/components/recruiter/question-builder";
 import { AddQuestionButton } from "@/components/recruiter/add-question-button";
 import { InterviewSettingsForm } from "@/components/recruiter/interview-settings-form";
@@ -18,6 +19,8 @@ export default async function BuildInterviewPage({
   const { workspace } = await getUserWorkspace(user.id);
   const interview = await getInterview(workspace.id, id);
   if (!interview) notFound();
+
+  const jobs = await getJobsForRolePicker(workspace.id);
 
   const totalMin = Math.round(
     interview.questions.reduce((s, q) => s + q.timeLimitSec, 0) / 60,
@@ -55,7 +58,7 @@ export default async function BuildInterviewPage({
           </div>
         </div>
 
-        <InterviewSettingsForm interview={interview} />
+        <InterviewSettingsForm interview={interview} jobs={jobs} />
       </div>
     </>
   );

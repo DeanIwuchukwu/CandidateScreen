@@ -1,4 +1,5 @@
 import type { CandidatePhase } from "@/lib/types";
+import { LogoMark } from "@/components/ui/wordmark";
 
 const STEPS = ["Setup", "Practice", "Record", "Submit"] as const;
 
@@ -35,8 +36,11 @@ export function CandidateFlowHeader({
     <header className="border-b border-hairline-3 bg-surface">
       <div className="flex items-center justify-between px-4 py-3.5 md:px-8">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-primary" />
-          <span className="text-[15px] font-semibold tracking-tight">Candidate Screen</span>
+          <LogoMark size={24} />
+          <span className="font-display text-[15px] font-medium tracking-tight">
+            <span className="text-ink">Candidate </span>
+            <span className="text-primary">Screen</span>
+          </span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-ink text-[11px] font-bold text-white">

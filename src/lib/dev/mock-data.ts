@@ -89,6 +89,7 @@ export const MOCK_INTERVIEW = {
   id: "demo-interview",
   workspaceId: "dev-workspace",
   ownerId: "dev-user",
+  jobId: "job-pd",
   title: "Product Designer",
   status: "ACTIVE" as const,
   welcomeMessage: "We loved your application — this is just a chance to hear how you think. Be yourself.",
@@ -107,6 +108,7 @@ export const MOCK_INTERVIEW = {
 export const MOCK_DRAFT_INTERVIEW = {
   ...MOCK_INTERVIEW,
   id: "demo-draft",
+  jobId: null,
   title: "Engineering Manager",
   status: "DRAFT" as const,
   publishedAt: null,

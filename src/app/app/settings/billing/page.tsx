@@ -5,7 +5,7 @@ import { SettingsTabs } from "@/components/recruiter/recruiter-ui";
 const plans = [
   {
     name: "Starter",
-    price: "$49",
+    price: "$19",
     desc: "For one or two roles at a time",
     features: ["100 responses / month", "2 team members", "Transcripts & scorecards"],
     cta: "Downgrade",
@@ -13,7 +13,7 @@ const plans = [
   },
   {
     name: "Team",
-    price: "$199",
+    price: "$99",
     desc: "For active, growing hiring teams",
     features: [
       "500 responses / month",
@@ -35,9 +35,9 @@ const plans = [
 ];
 
 const invoices = [
-  ["Jun 1, 2026", "$199.00"],
-  ["May 1, 2026", "$199.00"],
-  ["Apr 1, 2026", "$199.00"],
+  ["Jun 1, 2026", "$99.00"],
+  ["May 1, 2026", "$99.00"],
+  ["Apr 1, 2026", "$99.00"],
 ];
 
 export default async function BillingPage() {
@@ -64,7 +64,7 @@ export default async function BillingPage() {
                 </span>
               </div>
               <p className="mt-1.5 text-[13px] font-medium text-faint">
-                $199 / month · renews Jul 1, 2026
+                $99 / month · renews Jul 1, 2026
               </p>
             </div>
             <Button variant="secondary">Manage plan</Button>

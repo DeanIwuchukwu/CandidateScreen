@@ -152,7 +152,7 @@ export default function LandingPage() {
           {[
             {
               name: "Starter",
-              price: "$49",
+              price: "$19",
               highlight: false,
               subtitle: "For one or two roles at a time",
               features: [
@@ -163,7 +163,7 @@ export default function LandingPage() {
             },
             {
               name: "Team",
-              price: "$199",
+              price: "$99",
               highlight: true,
               subtitle: "For active, growing hiring teams",
               features: [

@@ -57,6 +57,12 @@ export async function loginAction(formData: FormData): Promise<void> {
   }
 
   await createSession(user.id);
+
+  const next = String(formData.get("next") || "").trim();
+  if (next && next.startsWith("/")) {
+    redirect(next);
+  }
+
   redirect("/app");
 }
 

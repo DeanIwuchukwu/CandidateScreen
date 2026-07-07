@@ -52,6 +52,13 @@ enum ApplicationStage {
   PASSED
 }
 
+enum WorkspaceInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -60,9 +67,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships WorkspaceMember[]
-  interviews  Interview[]         @relation("InterviewOwner")
-  jobs        Job[]               @relation("JobOwner")
+  memberships     WorkspaceMember[]
+  interviews      Interview[]         @relation("InterviewOwner")
+  jobs            Job[]               @relation("JobOwner")
+  workspaceInvites WorkspaceInvite[]  @relation("InvitedBy")
 }
 
 model Workspace {
@@ -76,6 +84,7 @@ model Workspace {
   updatedAt  DateTime @updatedAt
 
   members    WorkspaceMember[]
+  teamInvites WorkspaceInvite[]
   interviews Interview[]
   jobs       Job[]
 }
@@ -91,6 +100,25 @@ model WorkspaceMember {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
+}
+
+model WorkspaceInvite {
+  id          String                @id @default(cuid())
+  workspaceId String
+  email       String
+  role        WorkspaceRole         @default(RECRUITER)
+  token       String                @unique
+  status      WorkspaceInviteStatus @default(PENDING)
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime              @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, status])
 }
 
 model Interview {

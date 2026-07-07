@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; reset?: string }>;
+  searchParams: Promise<{ error?: string; reset?: string; next?: string }>;
 }) {
-  const { error, reset } = await searchParams;
+  const { error, reset, next } = await searchParams;
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[.92fr_1.08fr]">
@@ -50,6 +50,7 @@ export default async function LoginPage({
           </div>
 
           <form action={loginAction} className="mt-4 space-y-4">
+            {next && <input type="hidden" name="next" value={next} />}
             <label className="block">
               <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">Work email</span>
               <Input name="email" type="email" required autoComplete="email" />

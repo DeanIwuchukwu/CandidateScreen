@@ -288,7 +288,10 @@ export async function saveReviewAction(
 }
 
 export async function updateWorkspaceAction(formData: FormData) {
-  const { workspace } = await workspaceGuard();
+  const { workspace, role } = await workspaceGuard();
+  if (role !== "ADMIN") {
+    redirect("/app/settings?error=forbidden");
+  }
 
   await prisma.workspace.update({
     where: { id: workspace.id },

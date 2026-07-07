@@ -1,19 +1,27 @@
 import { requireSessionUser } from "@/lib/auth/session";
-import { getUserWorkspace, getWorkspaceMembers } from "@/lib/recruiter/queries";
+import { getUserWorkspace } from "@/lib/recruiter/queries";
 import { updateWorkspaceAction } from "@/lib/recruiter/actions";
+import { getTeamRoster } from "@/lib/team/queries";
+import { isAdmin } from "@/lib/team/permissions";
 import { Button } from "@/components/ui/button";
+import { TeamSection } from "@/components/recruiter/team-section";
 import {
-  AvatarCircle,
   SettingsTabs,
   ToggleSwitch,
 } from "@/components/recruiter/recruiter-ui";
 
 const accentColors = ["#1C6B47", "#2A6FDB", "#B5503D", "#6B4E8A", "#19211B"];
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const user = await requireSessionUser();
-  const { workspace } = await getUserWorkspace(user.id);
-  const members = await getWorkspaceMembers(workspace.id);
+  const membership = await getUserWorkspace(user.id);
+  const { workspace, role } = membership;
+  const roster = await getTeamRoster(workspace.id, user.id);
+  const { error } = await searchParams;
 
   return (
     <>
@@ -21,6 +29,12 @@ export default async function SettingsPage() {
         <h1 className="font-display text-[28px] font-medium leading-none">Settings</h1>
         <SettingsTabs active="workspace" />
       </div>
+
+      {error === "forbidden" && (
+        <p className="mx-8 mt-4 rounded-[10px] bg-[#FDF5F0] px-3 py-2.5 text-sm font-medium text-pass">
+          Only admins can update workspace settings.
+        </p>
+      )}
 
       <div className="grid items-start gap-6 px-8 py-[26px] lg:grid-cols-[1.1fr_0.9fr]">
         <div className="flex flex-col gap-[22px]">
@@ -32,7 +46,7 @@ export default async function SettingsPage() {
             <h2 className="mb-[18px] text-[15px] font-semibold">Company profile</h2>
             <div className="mb-5 flex items-center gap-4">
               <div className="grid h-[60px] w-[60px] place-items-center rounded-[14px] bg-ink text-2xl font-bold text-white">
-                N
+                {workspace.name.charAt(0).toUpperCase()}
               </div>
               <div>
                 <Button type="button" variant="secondary" size="sm">
@@ -48,16 +62,18 @@ export default async function SettingsPage() {
               <input
                 name="name"
                 defaultValue={workspace.name}
-                className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] px-3 py-2.5 text-sm font-medium"
+                disabled={!isAdmin(role)}
+                className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] px-3 py-2.5 text-sm font-medium disabled:bg-paper-2"
               />
             </label>
             <label className="block text-[12.5px] font-semibold text-muted">
               Careers page URL
               <input
                 name="careersUrl"
-                defaultValue={workspace.careersUrl ?? "northwind.com/careers"}
+                defaultValue={workspace.careersUrl ?? ""}
                 placeholder="https://company.com/careers"
-                className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] px-3 py-2.5 text-sm font-medium"
+                disabled={!isAdmin(role)}
+                className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] px-3 py-2.5 text-sm font-medium disabled:bg-paper-2"
               />
             </label>
             <input type="hidden" name="accentColor" value={workspace.accentColor} />
@@ -106,60 +122,24 @@ export default async function SettingsPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-hairline scroll-mt-24" id="team">
-            <div className="flex items-center justify-between px-[22px] py-4">
-              <h2 className="text-[15px] font-semibold">Team · {members.length} members</h2>
-              <Button size="sm">
-                <span className="mr-1">+</span> Invite
-              </Button>
-            </div>
-            {members.map((m) => {
-              const avatar =
-                "avatar" in m
-                  ? (m as { avatar: { initials: string; color: string } }).avatar
-                  : { initials: "??", color: "#1C6B47" };
-              const badge =
-                "badge" in m ? (m as { badge: string }).badge : m.role.toLowerCase();
-              const note = "note" in m ? (m as { note?: string }).note : undefined;
-
-              return (
-                <div
-                  key={m.id}
-                  className="flex items-center gap-3 border-t border-hairline-2 px-[22px] py-3"
-                >
-                  <AvatarCircle initials={avatar.initials} color={avatar.color} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13.5px] font-semibold">
-                      {m.user.name}
-                      {note === "you" && (
-                        <span className="font-medium text-faint-2"> · you</span>
-                      )}
-                      {note === "pending" && (
-                        <span className="font-medium text-warn"> · pending</span>
-                      )}
-                    </div>
-                    <div className="text-[11.5px] font-medium text-faint">{m.user.email}</div>
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                      badge === "Admin"
-                        ? "bg-primary-tint text-primary"
-                        : "bg-hairline-2 text-muted"
-                    }`}
-                  >
-                    {badge}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <TeamSection
+            members={roster.members}
+            pendingInvites={roster.pendingInvites}
+            isAdmin={isAdmin(role)}
+          />
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-3 border-t border-hairline-3 bg-[#FCFAF5] px-8 py-[18px]">
-        <Button variant="secondary">Cancel</Button>
-        <Button>Save changes</Button>
-      </div>
+      {isAdmin(role) && (
+        <div className="flex items-center justify-end gap-3 border-t border-hairline-3 bg-[#FCFAF5] px-8 py-[18px]">
+          <Button variant="secondary" type="button">
+            Cancel
+          </Button>
+          <Button form="branding" type="submit">
+            Save changes
+          </Button>
+        </div>
+      )}
     </>
   );
 }

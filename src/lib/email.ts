@@ -113,6 +113,32 @@ If you didn't request this, you can ignore this email.`;
   return sendEmail({ to: input.to, subject, html, text });
 }
 
+export async function sendTeamInviteEmail(input: {
+  to: string;
+  inviterName: string;
+  workspaceName: string;
+  role: string;
+  joinUrl: string;
+}) {
+  const roleLabel = input.role === "ADMIN" ? "Admin" : "Recruiter";
+  const subject = `Join ${input.workspaceName} on Candidate Screen`;
+  const text = `${input.inviterName} invited you to join ${input.workspaceName} as ${roleLabel}.
+
+Accept the invite: ${input.joinUrl}
+
+This link expires in 7 days.`;
+
+  const html = emailLayout(`
+    <p><strong>${input.inviterName}</strong> invited you to join <strong>${input.workspaceName}</strong> as <strong>${roleLabel}</strong>.</p>
+    <p style="margin: 28px 0;">
+      <a href="${input.joinUrl}" style="display: inline-block; background: #1C6B47; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;">Accept invite</a>
+    </p>
+    <p style="color: #6b7c72; font-size: 14px;">This link expires in 7 days.</p>
+  `);
+
+  return sendEmail({ to: input.to, subject, html, text });
+}
+
 export async function sendInterviewInviteEmail(payload: InviteEmailPayload) {
   const subject = `Video interview invitation — ${payload.jobTitle}`;
   const text = `${payload.message}\n\nRecord your interview: ${payload.inviteUrl}\n\n— ${payload.senderName}`;

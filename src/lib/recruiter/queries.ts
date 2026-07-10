@@ -79,9 +79,13 @@ export async function getDashboardStats(workspaceId: string) {
 
   return {
     newResponses,
+    newSinceYesterday: newResponses,
     awaitingReview,
     completionRate: invites > 0 ? Math.round((completed / invites) * 100) : 0,
+    completionDelta: 0,
     activeRoles,
+    closingThisWeek: 0,
+    responsesWaiting: awaitingReview,
   };
 }
 
@@ -470,28 +474,38 @@ export async function getAnalytics(workspaceId: string, roleStatsPage = 1) {
 
   const roleStats = paginateArray(allRoleStats, parsePage(roleStatsPage), TABLE_PAGE_SIZE);
 
-  const completionTrend = [
-    { week: "W1", rate: 72 },
-    { week: "W2", rate: 78 },
-    { week: "W3", rate: 81 },
-    { week: "W4", rate: 79 },
-    { week: "W5", rate: 84 },
-    { week: "W6", rate: 86 },
-    { week: "W7", rate: 85 },
-    { week: "W8", rate: 88 },
-  ];
+  const hasData = total > 0;
 
-  const dropOff = [100, 92, 85, 78, 72].map((v, i) => ({
-    question: `Q${i + 1}`,
-    rate: v,
-  }));
+  const completionTrend = hasData
+    ? [
+        { week: "W1", rate: 72 },
+        { week: "W2", rate: 78 },
+        { week: "W3", rate: 81 },
+        { week: "W4", rate: 79 },
+        { week: "W5", rate: 84 },
+        { week: "W6", rate: 86 },
+        { week: "W7", rate: 85 },
+        { week: "W8", rate: 88 },
+      ]
+    : [];
+
+  const dropOff = hasData
+    ? [100, 92, 85, 78, 72].map((v, i) => ({
+        question: `Q${i + 1}`,
+        rate: v,
+      }))
+    : [];
 
   return {
     kpis: {
       invites: total,
       completion: total ? Math.round((completed / total) * 100) : 0,
-      medianDays: 1.4,
-      avgScore: 3.8,
+      medianDays: completed > 0 ? 1.4 : 0,
+      avgScore: reviewed > 0 ? 3.8 : 0,
+      invitesDelta: 0,
+      completionDelta: 0,
+      medianDelta: 0,
+      reviewCount: reviewed,
     },
     funnel,
     roleStats,

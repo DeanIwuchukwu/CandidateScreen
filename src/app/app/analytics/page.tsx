@@ -13,12 +13,62 @@ export default async function AnalyticsPage({
   const { workspace } = await getUserWorkspace(user.id);
   const { page: pageParam } = await searchParams;
   const data = await getAnalytics(workspace.id, parsePage(pageParam));
-  const kpis = data.kpis as typeof data.kpis & {
-    invitesDelta?: number;
-    completionDelta?: number;
-    medianDelta?: number;
-    reviewCount?: number;
-  };
+  const kpis = data.kpis;
+
+  const analyticsCards = [
+    {
+      label: "Invites sent",
+      value: kpis.invites,
+      sub:
+        (kpis.invitesDelta ?? 0) > 0
+          ? `↑ ${kpis.invitesDelta}% vs last month`
+          : kpis.invites > 0
+            ? "No change vs last month"
+            : "No invites sent yet",
+      subClass: (kpis.invitesDelta ?? 0) > 0 ? "text-primary" : "text-faint",
+    },
+    {
+      label: "Completion rate",
+      value: `${kpis.completion}%`,
+      sub:
+        (kpis.completionDelta ?? 0) > 0
+          ? `↑ ${kpis.completionDelta} pts`
+          : kpis.completion > 0
+            ? "No change this month"
+            : "No completions yet",
+      subClass: (kpis.completionDelta ?? 0) > 0 ? "text-primary" : "text-faint",
+    },
+    {
+      label: "Median time to respond",
+      value: (
+        <>
+          {kpis.medianDays}{" "}
+          <span className="text-lg text-faint">days</span>
+        </>
+      ),
+      sub:
+        kpis.invites > 0
+          ? (kpis.medianDelta ?? 0) > 0
+            ? `↓ ${kpis.medianDelta} faster`
+            : "Based on completed interviews"
+          : "No response data yet",
+      subClass: (kpis.medianDelta ?? 0) > 0 ? "text-primary" : "text-faint",
+    },
+    {
+      label: "Avg overall score",
+      value: (
+        <>
+          {kpis.avgScore}{" "}
+          <span className="text-lg text-faint">/ 5</span>
+        </>
+      ),
+      sub:
+        (kpis.reviewCount ?? 0) > 0
+          ? `Across ${kpis.reviewCount} reviews`
+          : "No reviews yet",
+      subClass: "text-faint",
+    },
+  ];
 
   return (
     <>
@@ -37,42 +87,7 @@ export default async function AnalyticsPage({
 
       <div className="flex flex-col gap-[22px] p-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              label: "Invites sent",
-              value: kpis.invites,
-              sub: `↑ ${kpis.invitesDelta ?? 18}% vs last month`,
-              subClass: "text-primary",
-            },
-            {
-              label: "Completion rate",
-              value: `${kpis.completion}%`,
-              sub: `↑ ${kpis.completionDelta ?? 4} pts`,
-              subClass: "text-primary",
-            },
-            {
-              label: "Median time to respond",
-              value: (
-                <>
-                  {kpis.medianDays}{" "}
-                  <span className="text-lg text-faint">days</span>
-                </>
-              ),
-              sub: `↓ ${kpis.medianDelta ?? 0.3} faster`,
-              subClass: "text-primary",
-            },
-            {
-              label: "Avg overall score",
-              value: (
-                <>
-                  {kpis.avgScore}{" "}
-                  <span className="text-lg text-faint">/ 5</span>
-                </>
-              ),
-              sub: `Across ${kpis.reviewCount ?? 82} reviews`,
-              subClass: "text-faint",
-            },
-          ].map((card) => (
+          {analyticsCards.map((card) => (
             <div key={card.label} className="rounded-[14px] border border-hairline p-5">
               <div className="text-[12.5px] font-semibold text-faint">{card.label}</div>
               <div className="mt-1 font-display text-[32px] leading-tight">{card.value}</div>

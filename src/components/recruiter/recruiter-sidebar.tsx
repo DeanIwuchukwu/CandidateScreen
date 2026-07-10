@@ -11,7 +11,6 @@ import {
   Users,
 } from "lucide-react";
 import { Wordmark } from "@/components/ui/wordmark";
-import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -73,7 +72,7 @@ export function RecruiterSidebar({
             <div className="text-xs font-medium text-faint">{workspaceName}</div>
           </div>
         </div>
-        <form action={logoutAction} className="mt-2.5 px-1">
+        <form action="/api/auth/logout" method="POST" className="mt-2.5 px-1">
           <button
             type="submit"
             className="text-[12.5px] font-semibold text-faint transition-colors hover:text-ink"

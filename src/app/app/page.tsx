@@ -26,10 +26,50 @@ export default async function DashboardPage() {
   ]);
 
   const firstName = user.name.split(" ")[0];
-  const waiting =
-    "responsesWaiting" in stats
-      ? (stats as { responsesWaiting: number }).responsesWaiting
-      : stats.newResponses;
+  const waiting = stats.responsesWaiting;
+
+  const statCards = [
+    {
+      label: "New responses",
+      value: stats.newResponses,
+      sub:
+        stats.newSinceYesterday > 0
+          ? `↑ ${stats.newSinceYesterday} since yesterday`
+          : "No responses yet",
+      subClass: stats.newSinceYesterday > 0 ? "text-primary" : "text-faint",
+    },
+    {
+      label: "Awaiting review",
+      value: stats.awaitingReview,
+      sub:
+        stats.activeRoles > 0
+          ? `Across ${stats.activeRoles} roles`
+          : "No roles in review",
+      subClass: "text-faint",
+    },
+    {
+      label: "Completion rate",
+      value: `${stats.completionRate}%`,
+      sub:
+        stats.completionDelta > 0
+          ? `↑ ${stats.completionDelta} pts this month`
+          : stats.completionRate > 0
+            ? "No change this month"
+            : "No invites sent yet",
+      subClass: stats.completionDelta > 0 ? "text-primary" : "text-faint",
+    },
+    {
+      label: "Active roles",
+      value: stats.activeRoles,
+      sub:
+        stats.closingThisWeek > 0
+          ? `${stats.closingThisWeek} closing this week`
+          : stats.activeRoles > 0
+            ? "No deadlines this week"
+            : "Publish an interview to start",
+      subClass: "text-faint",
+    },
+  ];
 
   return (
     <>
@@ -55,32 +95,7 @@ export default async function DashboardPage() {
 
       <div className="flex flex-col gap-[26px] p-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              label: "New responses",
-              value: stats.newResponses,
-              sub: `↑ ${"newSinceYesterday" in stats ? (stats as { newSinceYesterday: number }).newSinceYesterday : 5} since yesterday`,
-              subClass: "text-primary",
-            },
-            {
-              label: "Awaiting review",
-              value: stats.awaitingReview,
-              sub: `Across ${stats.activeRoles} roles`,
-              subClass: "text-faint",
-            },
-            {
-              label: "Completion rate",
-              value: `${stats.completionRate}%`,
-              sub: `↑ ${"completionDelta" in stats ? (stats as { completionDelta: number }).completionDelta : 4} pts this month`,
-              subClass: "text-primary",
-            },
-            {
-              label: "Active roles",
-              value: stats.activeRoles,
-              sub: `${"closingThisWeek" in stats ? (stats as { closingThisWeek: number }).closingThisWeek : 2} closing this week`,
-              subClass: "text-faint",
-            },
-          ].map((card) => (
+          {statCards.map((card) => (
             <div key={card.label} className="rounded-[14px] border border-hairline p-5">
               <div className="text-[12.5px] font-semibold text-faint">{card.label}</div>
               <div className="mt-1 font-display text-[34px] leading-tight">{card.value}</div>

@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { CandidateStage, InterviewStatus } from "@prisma/client";
 import {
-  isInternalInviteEmail,
-  isShareInviteEmail,
   PREVIEW_INVITE_EMAIL_PREFIX,
   SHARE_INVITE_EMAIL_PREFIX,
 } from "@/lib/candidate/internal-invites";

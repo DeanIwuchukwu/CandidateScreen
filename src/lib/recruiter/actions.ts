@@ -125,7 +125,7 @@ export async function updateQuestionAction(
   revalidatePath(`/app/interviews/${question.interviewId}/build`);
 }
 
-export async function addQuestionAction(interviewId: string, _formData?: FormData) {
+export async function addQuestionAction(interviewId: string) {
   if (isDevBypass()) {
     revalidatePath(`/app/interviews/${interviewId}/build`);
     return;

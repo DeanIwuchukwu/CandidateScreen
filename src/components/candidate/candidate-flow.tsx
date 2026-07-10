@@ -66,6 +66,17 @@ function CandidateFlowInner({ data }: Props) {
 
   const onPrepDone = useCallback(() => persist("recording", qIndex), [persist, qIndex]);
 
+  const handleBackToIntro = useCallback(() => {
+    void persist("intro", 0);
+  }, [persist]);
+
+  const scrollToHowItWorks = useCallback(() => {
+    document.getElementById("what-to-expect")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
+
   const thinkTime = question?.thinkTimeSec || 3;
   const countdown = useCountdown(thinkTime, phase === "prep", onPrepDone);
 
@@ -90,17 +101,6 @@ function CandidateFlowInner({ data }: Props) {
     if (question.thinkTimeSec > 0) await persist("prep", qIndex);
     else await persist("recording", qIndex);
   };
-
-  const handleBackToIntro = useCallback(() => {
-    void persist("intro", 0);
-  }, [persist]);
-
-  const scrollToHowItWorks = useCallback(() => {
-    document.getElementById("what-to-expect")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, []);
 
   const handleStartRecording = () => {
     reset();

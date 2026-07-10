@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { deleteInterviewAction } from "@/lib/recruiter/actions";
 import { CopyInviteLinkButton } from "@/components/recruiter/copy-invite-link-button";
+import { RowActionsMenu } from "@/components/recruiter/row-actions-menu";
 import { formatInterviewMeta } from "@/lib/recruiter/format";
 import {
   InterviewStatusDot,
@@ -32,7 +33,7 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const href =
     interview.status === "DRAFT"
@@ -45,14 +46,12 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
   useEffect(() => {
     if (!menuOpen) return;
 
-    function onPointerDown(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
     }
 
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
 
   function handleDelete() {
@@ -137,8 +136,9 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
         )}
       </div>
 
-      <div ref={menuRef} className="relative flex justify-end">
+      <div className="relative flex justify-end">
         <button
+          ref={triggerRef}
           type="button"
           aria-label={`Actions for ${interview.title}`}
           aria-expanded={menuOpen}
@@ -150,27 +150,26 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
           ⋯
         </button>
 
-        {menuOpen && (
-          <div
-            role="menu"
-            className="absolute right-0 top-full z-20 mt-1 min-w-[180px] overflow-hidden rounded-[10px] border border-hairline bg-white py-1 shadow-lg"
+        <RowActionsMenu
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          triggerRef={triggerRef}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!canDelete || pending}
+            title={
+              canDelete
+                ? undefined
+                : "Interviews with candidate responses cannot be deleted"
+            }
+            onClick={handleDelete}
+            className="w-full px-3 py-2 text-left text-[13px] font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-faint-2 disabled:hover:bg-transparent"
           >
-            <button
-              type="button"
-              role="menuitem"
-              disabled={!canDelete || pending}
-              title={
-                canDelete
-                  ? undefined
-                  : "Interviews with candidate responses cannot be deleted"
-              }
-              onClick={handleDelete}
-              className="w-full px-3 py-2 text-left text-[13px] font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-faint-2 disabled:hover:bg-transparent"
-            >
-              {pending ? "Deleting…" : "Delete interview"}
-            </button>
-          </div>
-        )}
+            {pending ? "Deleting…" : "Delete interview"}
+          </button>
+        </RowActionsMenu>
       </div>
     </div>
   );

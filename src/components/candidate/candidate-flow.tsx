@@ -23,6 +23,7 @@ import {
 import { VideoPreview, RecordedPlayback } from "@/components/candidate/video-preview";
 import { CandidateFlowHeader } from "@/components/candidate/candidate-flow-chrome";
 import { CandidateHelpLink } from "@/components/candidate/candidate-help-dialog";
+import { CandidateHowItWorksLink, CANDIDATE_HOW_IT_WORKS_STEPS } from "@/components/candidate/candidate-how-it-works";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -69,13 +70,6 @@ function CandidateFlowInner({ data }: Props) {
   const handleBackToIntro = useCallback(() => {
     void persist("intro", 0);
   }, [persist]);
-
-  const scrollToHowItWorks = useCallback(() => {
-    document.getElementById("what-to-expect")?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, []);
 
   const thinkTime = question?.thinkTimeSec || 3;
   const countdown = useCountdown(thinkTime, phase === "prep", onPrepDone);
@@ -222,13 +216,7 @@ function CandidateFlowInner({ data }: Props) {
               <Button size="lg" className="rounded-full" onClick={handleStartSession}>
                 Get started →
               </Button>
-              <button
-                type="button"
-                onClick={scrollToHowItWorks}
-                className="text-sm font-semibold text-primary hover:underline"
-              >
-                See how it works ›
-              </button>
+              <CandidateHowItWorksLink workspaceName={data.interview.workspaceName} />
             </div>
             {data.interview.welcomeMessage && (
               <div className="mt-8 flex gap-3 rounded-[14px] border border-hairline bg-[#F7F3EA] p-5">
@@ -250,20 +238,7 @@ function CandidateFlowInner({ data }: Props) {
               What to expect
             </p>
             <ol className="mt-4 space-y-4 text-sm">
-              {[
-                {
-                  title: "Check your setup",
-                  desc: "Test camera and mic — takes about a minute.",
-                },
-                {
-                  title: "Warm up",
-                  desc: "One practice question that isn't recorded.",
-                },
-                {
-                  title: "Record your answers",
-                  desc: "Up to 2 minutes each — re-record anytime.",
-                },
-              ].map((step, i) => (
+              {CANDIDATE_HOW_IT_WORKS_STEPS.map((step, i) => (
                 <li key={step.title} className="flex gap-3">
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[#E0D9C8] bg-white text-xs font-semibold text-primary">
                     {i + 1}

@@ -165,7 +165,7 @@ export default async function InterviewsPage({
           <SortLabel>Sorted by · Recently active</SortLabel>
         </div>
 
-        <div className="overflow-hidden rounded-[14px] border border-hairline">
+        <div className="overflow-visible rounded-[14px] border border-hairline">
           <TableHeader
             columns={["Interview", "Status", "Responses", "Owner", "Invite link", ""]}
             gridTemplate={TABLE_GRID_INTERVIEWS}

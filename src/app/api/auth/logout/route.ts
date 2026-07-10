@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { getAppOrigin } from "@/lib/app-origin";
 import { prisma } from "@/lib/db";
 import { isDevBypass } from "@/lib/dev/bypass";
 
@@ -15,5 +16,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL("/login", request.url));
+  return NextResponse.redirect(new URL("/login", `${getAppOrigin(request)}/`));
 }

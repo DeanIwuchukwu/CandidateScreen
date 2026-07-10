@@ -1,4 +1,5 @@
 import type { CandidatePhase } from "@/lib/types";
+import { ChevronLeft } from "lucide-react";
 import { LogoMark } from "@/components/ui/wordmark";
 
 const STEPS = ["Setup", "Practice", "Record", "Submit"] as const;
@@ -25,22 +26,38 @@ export function CandidateFlowHeader({
   workspaceName,
   phase,
   showStepper = true,
+  onBack,
+  backLabel = "Back",
 }: {
   workspaceName: string;
   phase: CandidatePhase;
   showStepper?: boolean;
+  onBack?: () => void;
+  backLabel?: string;
 }) {
   const active = stepIndex(phase);
 
   return (
     <header className="border-b border-hairline-3 bg-surface">
       <div className="flex items-center justify-between px-4 py-3.5 md:px-8">
-        <div className="flex items-center gap-2">
-          <LogoMark size={24} />
-          <span className="font-display text-[15px] font-medium tracking-tight">
-            <span className="text-ink">Candidate </span>
-            <span className="text-primary">Screen</span>
-          </span>
+        <div className="flex min-w-0 items-center gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-primary hover:bg-paper-2"
+            >
+              <ChevronLeft size={16} aria-hidden />
+              {backLabel}
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <LogoMark size={24} />
+            <span className="font-display text-[15px] font-medium tracking-tight">
+              <span className="text-ink">Candidate </span>
+              <span className="text-primary">Screen</span>
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-ink text-[11px] font-bold text-white">

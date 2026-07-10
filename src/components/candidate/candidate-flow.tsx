@@ -22,6 +22,7 @@ import {
 } from "@/hooks/use-recorder";
 import { VideoPreview, RecordedPlayback } from "@/components/candidate/video-preview";
 import { CandidateFlowHeader } from "@/components/candidate/candidate-flow-chrome";
+import { CandidateHelpLink } from "@/components/candidate/candidate-help-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -89,6 +90,17 @@ function CandidateFlowInner({ data }: Props) {
     if (question.thinkTimeSec > 0) await persist("prep", qIndex);
     else await persist("recording", qIndex);
   };
+
+  const handleBackToIntro = useCallback(() => {
+    void persist("intro", 0);
+  }, [persist]);
+
+  const scrollToHowItWorks = useCallback(() => {
+    document.getElementById("what-to-expect")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
 
   const handleStartRecording = () => {
     reset();
@@ -212,6 +224,7 @@ function CandidateFlowInner({ data }: Props) {
               </Button>
               <button
                 type="button"
+                onClick={scrollToHowItWorks}
                 className="text-sm font-semibold text-primary hover:underline"
               >
                 See how it works ›
@@ -231,7 +244,7 @@ function CandidateFlowInner({ data }: Props) {
               </div>
             )}
           </div>
-          <div className="rounded-[14px] border border-hairline bg-panel p-8">
+          <div id="what-to-expect" className="rounded-[14px] border border-hairline bg-panel p-8 scroll-mt-6">
             <VideoPreview stream={null} className="aspect-video w-full rounded-[14px]" />
             <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-faint-2">
               What to expect
@@ -276,7 +289,12 @@ function CandidateFlowInner({ data }: Props) {
     const micLabel = mics.find((m) => m.deviceId === micId)?.label ?? "Built-in microphone";
     return (
       <div className="min-h-screen bg-paper">
-        <CandidateFlowHeader workspaceName={data.interview.workspaceName} phase={phase} />
+        <CandidateFlowHeader
+          workspaceName={data.interview.workspaceName}
+          phase={phase}
+          onBack={handleBackToIntro}
+          backLabel="Overview"
+        />
         <div className="mx-auto grid max-w-5xl gap-8 px-4 py-8 md:grid-cols-2 md:px-8 md:py-10">
           <div className="relative">
             <VideoPreview stream={stream} className="aspect-[4/3] w-full rounded-[16px]" />
@@ -340,7 +358,7 @@ function CandidateFlowInner({ data }: Props) {
                 <Check size={16} className="text-primary" /> Microphone detected
               </li>
             </ul>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button className="flex-1" onClick={handleSetupContinue} disabled={!stream}>
                 Everything looks good — Continue
               </Button>
@@ -348,6 +366,9 @@ function CandidateFlowInner({ data }: Props) {
                 Run test again
               </Button>
             </div>
+            <p className="mt-4 text-center">
+              <CandidateHelpLink />
+            </p>
           </div>
         </div>
       </div>
@@ -633,9 +654,7 @@ function CameraBlockedScreen({ onRetry }: { onRetry: () => void }) {
           </ol>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button onClick={onRetry}>Try again</Button>
-            <button type="button" className="text-sm font-semibold text-primary hover:underline">
-              Get help ›
-            </button>
+            <CandidateHelpLink />
           </div>
         </div>
       </div>

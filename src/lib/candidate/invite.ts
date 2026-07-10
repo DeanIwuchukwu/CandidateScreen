@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/db";
 import type { CandidatePhase, InvitePayload } from "@/lib/types";
+import { isPreviewInviteEmail } from "@/lib/candidate/internal-invites";
 import { isDevBypass } from "@/lib/dev/bypass";
 import { mockInvitePayload } from "@/lib/dev/mock-data";
 
 export async function getInvitePayload(token: string): Promise<InvitePayload> {
-  if (isDevBypass()) return mockInvitePayload(token);
+  if (isDevBypass()) {
+    const payload = mockInvitePayload(token);
+    return { ...payload, isPreview: false };
+  }
 
   const invite = await prisma.invite.findUnique({
     where: { token },
@@ -74,6 +78,7 @@ export async function getInvitePayload(token: string): Promise<InvitePayload> {
       uploadedQuestionIds,
     },
     recruiterName: invite.interview.owner.name,
+    isPreview: isPreviewInviteEmail(invite.email),
   };
 }
 

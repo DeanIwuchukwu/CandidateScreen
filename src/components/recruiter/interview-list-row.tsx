@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { deleteInterviewAction } from "@/lib/recruiter/actions";
+import { CopyInviteLinkButton } from "@/components/recruiter/copy-invite-link-button";
 import { formatInterviewMeta } from "@/lib/recruiter/format";
 import {
   InterviewStatusDot,
   OwnerCell,
   ResponseProgress,
-  TABLE_GRID_STANDARD,
+  TABLE_GRID_INTERVIEWS,
 } from "@/components/recruiter/recruiter-ui";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ export type InterviewListRowData = {
   invited: number;
   responded: number;
   hasCandidateResponses: boolean;
+  shareToken: string | null;
   owner: { firstName: string; initials: string; color: string };
 };
 
@@ -82,7 +84,7 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
   return (
     <div
       className="grid items-center gap-4 border-b border-hairline-2 px-[22px] py-[15px] last:border-0 hover:bg-reviewed"
-      style={{ gridTemplateColumns: TABLE_GRID_STANDARD }}
+      style={{ gridTemplateColumns: TABLE_GRID_INTERVIEWS }}
     >
       <Link href={href} className="min-w-0">
         <div
@@ -126,6 +128,14 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
           color={interview.owner.color}
         />
       </Link>
+
+      <div className="flex items-center">
+        {interview.shareToken ? (
+          <CopyInviteLinkButton token={interview.shareToken} />
+        ) : (
+          <span className="text-[12px] font-medium text-faint-2">Publish to share</span>
+        )}
+      </div>
 
       <div ref={menuRef} className="relative flex justify-end">
         <button

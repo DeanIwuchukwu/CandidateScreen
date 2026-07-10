@@ -7,6 +7,8 @@ import {
   getUserWorkspace,
 } from "@/lib/recruiter/queries";
 import { parsePage } from "@/lib/recruiter/pagination";
+import { isShareInviteEmail, isPreviewInviteEmail } from "@/lib/candidate/internal-invites";
+import { getOrCreateShareInviteToken } from "@/lib/recruiter/share-invite";
 import { Button } from "@/components/ui/button";
 import {
   InterviewListRow,
@@ -17,18 +19,46 @@ import {
   PageHeader,
   SearchField,
   SortLabel,
-  TABLE_GRID_STANDARD,
+  TABLE_GRID_INTERVIEWS,
   TableHeader,
   TablePagination,
 } from "@/components/recruiter/recruiter-ui";
 
 const tabs = ["All", "Active", "Draft", "Closed"] as const;
 
-type InterviewRow = Awaited<
-  ReturnType<typeof getInterviewsPaginated>
->["items"][number] & {
-  ownerMeta?: { firstName: string; initials: string; color: string };
+type InviteSummary = {
+  id: string;
+  status?: string;
+  email?: string | null;
+  token?: string;
+  candidateName?: string | null;
 };
+
+type InterviewRow = {
+  id: string;
+  title: string;
+  status: "ACTIVE" | "DRAFT" | "CLOSED";
+  createdAt: Date;
+  updatedAt: Date;
+  questions: { length: number };
+  invites: InviteSummary[];
+  owner: { name: string };
+  ownerMeta?: { firstName: string; initials: string; color: string };
+  shareToken?: string | null;
+};
+
+function isRealCandidateInvite(invite: InviteSummary) {
+  if (invite.email && isShareInviteEmail(invite.email)) return false;
+  if (invite.email && isPreviewInviteEmail(invite.email)) return false;
+  if (invite.candidateName === "Demo Candidate") return false;
+  return true;
+}
+
+function countResponded(invites: InviteSummary[]) {
+  const withStatus = invites.filter((i) => i.status);
+  if (withStatus.length === 0) return invites.length;
+  return invites.filter((i) => i.status === "COMPLETED").length;
+}
 
 function toListRow(interview: InterviewRow): InterviewListRowData {
   const owner = interview.ownerMeta ?? {
@@ -42,6 +72,8 @@ function toListRow(interview: InterviewRow): InterviewListRowData {
     color: "#1C6B47",
   };
 
+  const candidateInvites = interview.invites.filter(isRealCandidateInvite);
+
   return {
     id: interview.id,
     title: interview.title,
@@ -49,11 +81,26 @@ function toListRow(interview: InterviewRow): InterviewListRowData {
     createdAt: interview.createdAt.toISOString(),
     updatedAt: interview.updatedAt.toISOString(),
     questionCount: interview.questions.length,
-    invited: interview._count.invites,
-    responded: interview.invites.length,
-    hasCandidateResponses: interview.invites.length > 0,
+    invited: candidateInvites.length,
+    responded: countResponded(candidateInvites),
+    hasCandidateResponses: countResponded(candidateInvites) > 0,
+    shareToken: interview.shareToken ?? null,
     owner,
   };
+}
+
+async function attachShareTokens(interviews: InterviewRow[]) {
+  return Promise.all(
+    interviews.map(async (interview) => {
+      if (interview.status === "DRAFT") {
+        return { ...interview, shareToken: null };
+      }
+
+      const existing = interview.invites.find((i) => isShareInviteEmail(i.email))?.token;
+      const shareToken = existing ?? (await getOrCreateShareInviteToken(interview.id));
+      return { ...interview, shareToken };
+    }),
+  );
 }
 
 export default async function InterviewsPage({
@@ -80,7 +127,12 @@ export default async function InterviewsPage({
     }),
   ]);
 
-  const interviews = interviewsPage.items as InterviewRow[];
+  const interviews = await attachShareTokens(
+    interviewsPage.items.map((item) => ({
+      ...(item as InterviewRow),
+      invites: (item.invites ?? []) as InviteSummary[],
+    })),
+  );
 
   return (
     <>
@@ -115,8 +167,8 @@ export default async function InterviewsPage({
 
         <div className="overflow-hidden rounded-[14px] border border-hairline">
           <TableHeader
-            columns={["Interview", "Status", "Responses", "Owner", ""]}
-            gridTemplate={TABLE_GRID_STANDARD}
+            columns={["Interview", "Status", "Responses", "Owner", "Invite link", ""]}
+            gridTemplate={TABLE_GRID_INTERVIEWS}
           />
           {interviews.map((interview) => (
             <InterviewListRow key={interview.id} interview={toListRow(interview)} />

@@ -181,6 +181,11 @@ function CandidateFlowInner({ data }: Props) {
   if (phase === "intro") {
     return (
       <div className="min-h-screen bg-paper">
+        {data.isPreview && (
+          <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm font-medium text-amber-900">
+            Recruiter preview — recordings are not saved
+          </p>
+        )}
         <CandidateFlowHeader workspaceName={data.interview.workspaceName} phase={phase} showStepper={false} />
         <div className="mx-auto grid max-w-5xl gap-10 px-4 py-10 md:grid-cols-2 md:px-10 md:py-12">
           <div>

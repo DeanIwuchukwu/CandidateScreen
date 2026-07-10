@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/db";
 import type { CandidateStage, InterviewStatus } from "@prisma/client";
+import {
+  isInternalInviteEmail,
+  isShareInviteEmail,
+  PREVIEW_INVITE_EMAIL_PREFIX,
+  SHARE_INVITE_EMAIL_PREFIX,
+} from "@/lib/candidate/internal-invites";
 import { isDevBypass } from "@/lib/dev/bypass";
 import {
   buildPaginatedResult,
@@ -69,8 +75,16 @@ export async function getDashboardStats(workspaceId: string) {
         invite: { interview: { workspaceId } },
       },
     }),
-    prisma.invite.count({ where: { interview: { workspaceId } } }),
-    prisma.invite.count({ where: { interview: { workspaceId }, status: "COMPLETED" } }),
+    prisma.invite.count({
+      where: { interview: { workspaceId }, ...realCandidateInviteFilter },
+    }),
+    prisma.invite.count({
+      where: {
+        interview: { workspaceId },
+        status: "COMPLETED",
+        ...realCandidateInviteFilter,
+      },
+    }),
   ]);
 
   const activeRoles = await prisma.interview.count({
@@ -133,11 +147,28 @@ export async function getInterviews(workspaceId: string, status?: InterviewStatu
   });
 }
 
+const realCandidateInviteFilter = {
+  NOT: {
+    OR: [
+      { email: { startsWith: PREVIEW_INVITE_EMAIL_PREFIX } },
+      { email: { startsWith: SHARE_INVITE_EMAIL_PREFIX } },
+      { candidateName: "Demo Candidate" },
+    ],
+  },
+};
+
 const interviewListInclude = {
   owner: true,
   questions: true,
-  _count: { select: { invites: true } },
-  invites: { where: { status: "COMPLETED" as const }, select: { id: true } },
+  invites: {
+    select: {
+      id: true,
+      status: true,
+      email: true,
+      token: true,
+      candidateName: true,
+    },
+  },
 };
 
 export async function getInterviewTabCounts(workspaceId: string) {
@@ -219,30 +250,38 @@ export async function getCandidateRoles(workspaceId: string) {
 
   const interviews = await prisma.interview.findMany({
     where: { workspaceId, status: { in: ["ACTIVE", "CLOSED"] } },
-    include: {
-      _count: { select: { invites: true } },
-      invites: {
-        where: { status: "COMPLETED" },
-        select: { id: true },
-      },
-    },
     orderBy: { updatedAt: "desc" },
   });
 
   const roles = await Promise.all(
     interviews.map(async (interview) => {
-      const toReview = await prisma.candidateResponse.count({
-        where: {
-          stage: "TO_REVIEW",
-          invite: { interviewId: interview.id },
-        },
-      });
+      const [invited, responded, toReview] = await Promise.all([
+        prisma.invite.count({
+          where: { interviewId: interview.id, ...realCandidateInviteFilter },
+        }),
+        prisma.invite.count({
+          where: {
+            interviewId: interview.id,
+            status: "COMPLETED",
+            ...realCandidateInviteFilter,
+          },
+        }),
+        prisma.candidateResponse.count({
+          where: {
+            stage: "TO_REVIEW",
+            invite: {
+              interviewId: interview.id,
+              ...realCandidateInviteFilter,
+            },
+          },
+        }),
+      ]);
       return {
         id: interview.id,
         title: interview.title,
         status: interview.status,
-        invited: interview._count.invites,
-        responded: interview.invites.length,
+        invited,
+        responded,
         toReview,
       };
     }),
@@ -262,13 +301,6 @@ export async function getCandidateRolesPaginated(workspaceId: string, page = 1) 
   const [interviews, total] = await Promise.all([
     prisma.interview.findMany({
       where,
-      include: {
-        _count: { select: { invites: true } },
-        invites: {
-          where: { status: "COMPLETED" },
-          select: { id: true },
-        },
-      },
       orderBy: { updatedAt: "desc" },
       skip: (safePage - 1) * TABLE_PAGE_SIZE,
       take: TABLE_PAGE_SIZE,
@@ -278,18 +310,33 @@ export async function getCandidateRolesPaginated(workspaceId: string, page = 1) 
 
   const items = await Promise.all(
     interviews.map(async (interview) => {
-      const toReview = await prisma.candidateResponse.count({
-        where: {
-          stage: "TO_REVIEW",
-          invite: { interviewId: interview.id },
-        },
-      });
+      const [invited, responded, toReview] = await Promise.all([
+        prisma.invite.count({
+          where: { interviewId: interview.id, ...realCandidateInviteFilter },
+        }),
+        prisma.invite.count({
+          where: {
+            interviewId: interview.id,
+            status: "COMPLETED",
+            ...realCandidateInviteFilter,
+          },
+        }),
+        prisma.candidateResponse.count({
+          where: {
+            stage: "TO_REVIEW",
+            invite: {
+              interviewId: interview.id,
+              ...realCandidateInviteFilter,
+            },
+          },
+        }),
+      ]);
       return {
         id: interview.id,
         title: interview.title,
         status: interview.status,
-        invited: interview._count.invites,
-        responded: interview.invites.length,
+        invited,
+        responded,
         toReview,
       };
     }),
@@ -311,6 +358,7 @@ export async function getCandidateStageCounts(
         where: {
           stage,
           invite: {
+            ...realCandidateInviteFilter,
             interview: {
               workspaceId,
               ...(interviewId ? { id: interviewId } : {}),
@@ -340,6 +388,7 @@ export async function getCandidates(
     where: {
       ...(opts.stage ? { stage: opts.stage } : {}),
       invite: {
+        ...realCandidateInviteFilter,
         interview: {
           workspaceId,
           ...(opts.interviewId ? { id: opts.interviewId } : {}),
@@ -372,6 +421,7 @@ export async function getCandidatesPaginated(
   const where = {
     ...(opts.stage ? { stage: opts.stage } : {}),
     invite: {
+      ...realCandidateInviteFilter,
       interview: {
         workspaceId,
         ...(opts.interviewId ? { id: opts.interviewId } : {}),

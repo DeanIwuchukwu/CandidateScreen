@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus } from "lucide-react";
 import { requireSessionUser } from "@/lib/auth/session";
 import {
   getCandidatesPaginated,
@@ -9,8 +8,10 @@ import {
   getInterview,
   getUserWorkspace,
 } from "@/lib/recruiter/queries";
+import { getInterviewPipelineStats } from "@/lib/recruiter/pipeline-stats";
 import { parsePage } from "@/lib/recruiter/pagination";
 import { formatRelativeTime } from "@/lib/recruiter/format";
+import { CandidatesPipelineActions } from "@/components/recruiter/candidates-pipeline-actions";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/ui/star-rating";
 import {
@@ -72,21 +73,21 @@ export default async function CandidatesPage({
   const interview = await getInterview(workspace.id, interviewId);
   if (!interview) notFound();
 
-  const [candidatesPage, counts] = await Promise.all([
+  const [candidatesPage, counts, pipeline] = await Promise.all([
     getCandidatesPaginated(workspace.id, {
       interviewId,
       stage: stage === "ALL" ? undefined : (stage as CandidateStage),
       page,
     }),
     getCandidateStageCounts(workspace.id, interviewId),
+    getInterviewPipelineStats(workspace.id, interviewId),
   ]);
 
   const rows = candidatesPage.items as CandidateRow[];
   const roleTitle = interview.title;
-  const invited =
-    "_count" in interview && interview._count
-      ? (interview._count as { invites: number }).invites
-      : 0;
+  const invited = pipeline?.invited ?? 0;
+  const started = pipeline?.started ?? 0;
+  const shareToken = pipeline?.shareToken ?? null;
 
   if (counts.TO_REVIEW === 0 && stage === "TO_REVIEW" && page === 1) {
     return (
@@ -99,31 +100,35 @@ export default async function CandidatesPage({
         </div>
         <h1 className="font-display text-[27px] font-medium">No responses yet</h1>
         <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted">
-          You&apos;ve invited{" "}
-          <strong className="text-ink">{invited || 15} candidates</strong>. Their answers
-          will land here as they record — usually within a day or two. We&apos;ll email you when
-          the first one arrives.
+          {invited > 0 ? (
+            <>
+              You&apos;ve invited{" "}
+              <strong className="text-ink">
+                {invited} candidate{invited === 1 ? "" : "s"}
+              </strong>
+              . Their answers will land here as they record — usually within a day or two.
+              We&apos;ll email you when the first one arrives.
+            </>
+          ) : (
+            <>
+              Share your invite link or send personal invites. Responses will land here as
+              candidates record — we&apos;ll email you when the first one arrives.
+            </>
+          )}
         </p>
-        <div className="mt-7 flex gap-3">
-          <Button>Copy invite link</Button>
-          <Button variant="secondary">Invite more</Button>
-        </div>
-        <div className="mt-8 flex flex-col items-center gap-3">
-          <div className="flex -space-x-2">
-            {["JR", "AL", "MK", "ST"].map((initials, i) => (
-              <span
-                key={initials}
-                className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-primary text-[10px] font-bold text-white"
-                style={{ zIndex: 4 - i }}
-              >
-                {initials}
-              </span>
-            ))}
+        <CandidatesPipelineActions
+          interviewId={interviewId}
+          interviewTitle={roleTitle}
+          shareToken={shareToken}
+          variant="empty"
+        />
+        {invited > 0 && (
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <p className="text-[13px] font-medium text-faint">
+              {invited} invited · {started} started
+            </p>
           </div>
-          <p className="text-[13px] font-medium text-faint">
-            {invited || 15} invited · 0 started · invites sent today
-          </p>
-        </div>
+        )}
         <Link
           href="/app/candidates"
           className="mt-6 text-sm font-semibold text-primary hover:underline"
@@ -149,10 +154,12 @@ export default async function CandidatesPage({
             <Button variant="secondary" size="sm">
               Export
             </Button>
-            <Button size="sm">
-              <Plus size={15} />
-              Invite candidates
-            </Button>
+            <CandidatesPipelineActions
+              interviewId={interviewId}
+              interviewTitle={roleTitle}
+              shareToken={shareToken}
+              variant="header"
+            />
           </div>
         </div>
 

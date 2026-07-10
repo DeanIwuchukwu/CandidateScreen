@@ -1,8 +1,23 @@
 "use client";
 
+import { useFormStatus } from "react-dom";
 import { createInterviewAction } from "@/lib/recruiter/actions";
 import { InterviewRoleSelector } from "@/components/recruiter/interview-role-selector";
 import type { JobRoleOption } from "@/lib/jobs/queries";
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full rounded-[10px] bg-primary py-3 text-sm font-semibold text-white hover:bg-[#185a3c] disabled:opacity-60"
+    >
+      {pending ? "Creating…" : "Continue to builder"}
+    </button>
+  );
+}
 
 export function CreateInterviewForm({ jobs }: { jobs: JobRoleOption[] }) {
   return (
@@ -18,12 +33,7 @@ export function CreateInterviewForm({ jobs }: { jobs: JobRoleOption[] }) {
 
         <InterviewRoleSelector jobs={jobs} defaultTitle="" />
 
-        <button
-          type="submit"
-          className="w-full rounded-[10px] bg-primary py-3 text-sm font-semibold text-white hover:bg-[#185a3c]"
-        >
-          Continue to builder
-        </button>
+        <SubmitButton />
       </form>
     </div>
   );

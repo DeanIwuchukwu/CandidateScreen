@@ -59,6 +59,7 @@ export function CountTabs({ tabs }: { tabs: Tab[] }) {
   );
 }
 
+export const TABLE_GRID_INTERVIEWS = "2.4fr 0.9fr 1.1fr 1fr 1.1fr 0.4fr";
 export const TABLE_GRID_STANDARD = "2.6fr 1fr 1.4fr 1.2fr 0.5fr";
 export const TABLE_GRID_ROLES = "2.2fr 1fr 1fr 1.4fr 0.5fr";
 export const TABLE_GRID_PIPELINE = "2.4fr 1.1fr 1.3fr 1.2fr 0.6fr";

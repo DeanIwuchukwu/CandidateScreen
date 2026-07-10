@@ -22,9 +22,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   deleteQuestionAction,
+  addQuestionAction,
   reorderQuestionsAction,
   updateQuestionAction,
 } from "@/lib/recruiter/actions";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Question = {
@@ -51,9 +53,13 @@ export function QuestionBuilder({
   const router = useRouter();
   const [questions, setQuestions] = useState(initial);
   const [activeId, setActiveId] = useState(initial[0]?.id ?? "");
-  const [pending, startTransition] = useTransition();
+  const [savePending, startSave] = useTransition();
+  const [addPending, startAdd] = useTransition();
+  const pending = savePending || addPending;
   const prevIdsRef = useRef(new Set(initial.map((q) => q.id)));
   const questionsRef = useRef(questions);
+
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const questionIds = initial.map((q) => q.id).join(",");
 
@@ -90,7 +96,7 @@ export function QuestionBuilder({
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
   }
 
-  function persistQuestion(id: string) {
+  async function persistQuestionAsync(id: string) {
     const q = questionsRef.current.find((item) => item.id === id);
     if (!q) return;
 
@@ -102,7 +108,30 @@ export function QuestionBuilder({
     };
 
     patchQuestion(id, { text: payload.text });
-    startTransition(() => updateQuestionAction(id, payload));
+    await updateQuestionAction(id, payload);
+    setSavedId(id);
+    window.setTimeout(() => setSavedId((current) => (current === id ? null : current)), 2000);
+  }
+
+  function persistQuestion(id: string) {
+    startSave(() => persistQuestionAsync(id));
+  }
+
+  function saveActiveQuestion() {
+    if (!activeId || pending) return;
+    startSave(async () => {
+      await persistQuestionAsync(activeId);
+      router.refresh();
+    });
+  }
+
+  function addQuestion() {
+    if (pending) return;
+    startAdd(async () => {
+      if (activeId) await persistQuestionAsync(activeId);
+      await addQuestionAction(interviewId);
+      router.refresh();
+    });
   }
 
   function selectQuestion(id: string) {
@@ -121,7 +150,7 @@ export function QuestionBuilder({
     setQuestions(nextQuestions);
     setActiveId(nextActiveId);
 
-    startTransition(async () => {
+    startSave(async () => {
       await deleteQuestionAction(id, interviewId);
       router.refresh();
     });
@@ -136,7 +165,7 @@ export function QuestionBuilder({
     const next = arrayMove(questions, oldIndex, newIndex);
     setQuestions(next);
 
-    startTransition(() =>
+    startSave(() =>
       reorderQuestionsAction(
         interviewId,
         next.map((q) => q.id),
@@ -200,8 +229,27 @@ export function QuestionBuilder({
               </label>
             ))}
           </div>
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending}
+              onClick={saveActiveQuestion}
+            >
+              {savePending ? "Saving…" : savedId === active.id ? "Saved" : "Save changes"}
+            </Button>
+          </div>
         </div>
       )}
+
+      <button
+        type="button"
+        disabled={pending}
+        onClick={addQuestion}
+        className="flex w-full items-center justify-center gap-2 rounded-[13px] border border-dashed border-[#D2CBB9] py-4 text-[13.5px] font-semibold text-primary hover:border-primary disabled:opacity-60"
+      >
+        {addPending ? "Adding…" : "+ Add a question"}
+      </button>
     </div>
   );
 }

@@ -9,7 +9,19 @@ import type { CandidateDecision, CandidateStage, Prisma } from "@prisma/client";
 import { RUBRIC_CRITERIA } from "@/lib/types";
 import { isDevBypass } from "@/lib/dev/bypass";
 import { MOCK_USER } from "@/lib/dev/mock-data";
+import { ensureCandidateResponse } from "@/lib/candidate/invite";
+import { isRealCandidateInvite } from "@/lib/candidate/internal-invites";
+import {
+  firstNameFromFullName,
+  mergeInviteMessage,
+  sendInterviewInviteEmail,
+} from "@/lib/email";
 import { resolveInterviewRoleFromForm } from "@/lib/recruiter/interview-role";
+import { invitePublicUrl } from "@/lib/recruiter/invite-url";
+
+function appUrl() {
+  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+}
 
 /** Avoid @@unique([interviewId, order]) collisions when reassigning order values. */
 async function applyQuestionOrder(
@@ -210,29 +222,26 @@ export async function deleteInterviewAction(
   return { ok: true };
 }
 
+import { getOrCreateShareInviteToken } from "@/lib/recruiter/share-invite";
+
 export async function publishInterviewAction(interviewId: string) {
-  if (isDevBypass()) return { token: "demo-invite-token" };
+  if (isDevBypass()) return { ok: true as const, token: "demo-invite-token" };
   const { workspace } = await workspaceGuard();
   const interview = await prisma.interview.findFirst({
     where: { id: interviewId, workspaceId: workspace.id },
   });
-  if (!interview) return;
-
-  const invite = await prisma.invite.create({
-    data: {
-      interviewId,
-      candidateName: "Demo Candidate",
-      expiresAt: new Date(Date.now() + interview.deadlineDays * 86400000),
-    },
-  });
+  if (!interview) return { ok: false as const };
 
   await prisma.interview.update({
     where: { id: interviewId },
     data: { status: "ACTIVE", publishedAt: new Date() },
   });
 
+  const token = await getOrCreateShareInviteToken(interviewId);
+
   revalidatePath("/app/interviews");
-  return { token: invite.token };
+  revalidatePath(`/app/interviews/${interviewId}/build`);
+  return { ok: true as const, token };
 }
 
 export async function saveReviewAction(
@@ -316,4 +325,65 @@ export async function submitContactAction(formData: FormData) {
       message: String(formData.get("message") || ""),
     },
   });
+}
+
+export async function inviteCandidateToInterviewAction(
+  interviewId: string,
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (isDevBypass()) return { ok: true };
+
+  const name = String(formData.get("name") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  if (name.length < 2 || !email.includes("@")) {
+    return { ok: false, error: "Enter a valid name and email." };
+  }
+
+  const { user, workspace } = await workspaceGuard();
+  const interview = await prisma.interview.findFirst({
+    where: {
+      id: interviewId,
+      workspaceId: workspace.id,
+      status: { in: ["ACTIVE", "CLOSED"] },
+    },
+  });
+  if (!interview) return { ok: false, error: "Interview not found." };
+
+  const existing = await prisma.invite.findFirst({
+    where: { interviewId, email },
+  });
+  if (existing && isRealCandidateInvite(existing)) {
+    return { ok: false, error: "This candidate is already invited." };
+  }
+
+  const expiresAt = new Date(Date.now() + interview.deadlineDays * 86400000);
+  const invite = await prisma.invite.create({
+    data: {
+      interviewId,
+      email,
+      candidateName: name,
+      expiresAt,
+    },
+  });
+
+  await ensureCandidateResponse(invite.id);
+
+  const firstName = firstNameFromFullName(name);
+  const message = mergeInviteMessage(
+    `Hi [First name] — we'd love to hear from you. Here's a short video interview you can record whenever suits you.`,
+    firstName,
+  );
+
+  void sendInterviewInviteEmail({
+    to: email,
+    candidateName: name,
+    jobTitle: interview.title,
+    message,
+    inviteUrl: invitePublicUrl(invite.token, appUrl()),
+    senderName: user.name,
+  }).catch((err) => console.error("[email] interview invite failed", err));
+
+  revalidatePath("/app/candidates");
+  revalidatePath(`/app/candidates?interview=${interviewId}`);
+  return { ok: true };
 }

@@ -35,6 +35,7 @@ export type InvitePayload = {
     uploadedQuestionIds: string[];
   };
   recruiterName: string;
+  isPreview?: boolean;
 };
 
 export const RUBRIC_CRITERIA = [

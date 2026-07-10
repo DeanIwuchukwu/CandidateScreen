@@ -10,7 +10,16 @@ import {
 } from "@/lib/storage";
 import { ensureCandidateResponse } from "@/lib/candidate/invite";
 import { mockTranscript, type CandidatePhase } from "@/lib/types";
+import { isPreviewInviteEmail } from "@/lib/candidate/internal-invites";
 import { isDevBypass } from "@/lib/dev/bypass";
+
+async function isPreviewToken(token: string) {
+  const invite = await prisma.invite.findUnique({
+    where: { token },
+    select: { email: true },
+  });
+  return isPreviewInviteEmail(invite?.email);
+}
 
 async function getInviteContext(token: string, questionId: string) {
   const invite = await prisma.invite.findUnique({
@@ -106,6 +115,7 @@ export async function saveCandidateProgress(
 
 export async function prepareVideoUpload(token: string, questionId: string) {
   if (isDevBypass()) return { ok: true as const, useR2: false as const };
+  if (await isPreviewToken(token)) return { ok: true as const, useR2: false as const };
   if (!isR2Storage()) return { ok: true as const, useR2: false as const };
 
   const ctx = await getInviteContext(token, questionId);
@@ -124,6 +134,7 @@ export async function completeVideoUpload(
   durationSec: number,
 ) {
   if (isDevBypass()) return { ok: true, videoUrl: null };
+  if (await isPreviewToken(token)) return { ok: true, videoUrl: null };
   const ctx = await getInviteContext(token, questionId);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
@@ -146,6 +157,7 @@ export async function uploadCandidateAnswer(
   formData: FormData,
 ) {
   if (isDevBypass()) return { ok: true, videoUrl: null };
+  if (await isPreviewToken(token)) return { ok: true, videoUrl: null };
   const ctx = await getInviteContext(token, questionId);
   if ("error" in ctx) return { ok: false, error: ctx.error };
 
@@ -169,6 +181,7 @@ export async function uploadCandidateAnswer(
 
 export async function submitCandidateInterview(token: string) {
   if (isDevBypass()) return { ok: true };
+  if (await isPreviewToken(token)) return { ok: true };
   const invite = await prisma.invite.findUnique({
     where: { token },
     include: { response: true, interview: { include: { questions: true } } },

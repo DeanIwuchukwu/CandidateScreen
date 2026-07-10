@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { requireSessionUser } from "@/lib/auth/session";
 import { getInterview, getUserWorkspace } from "@/lib/recruiter/queries";
 import { getJobsForRolePicker } from "@/lib/jobs/queries";
+import { getPreviewInviteToken } from "@/lib/recruiter/preview-invite";
 import { QuestionBuilder } from "@/components/recruiter/question-builder";
-import { AddQuestionButton } from "@/components/recruiter/add-question-button";
 import { InterviewSettingsForm } from "@/components/recruiter/interview-settings-form";
 import { PublishButton } from "@/components/recruiter/publish-button";
 import { SectionLabel } from "@/components/recruiter/recruiter-ui";
@@ -21,6 +21,7 @@ export default async function BuildInterviewPage({
   if (!interview) notFound();
 
   const jobs = await getJobsForRolePicker(workspace.id);
+  const previewToken = await getPreviewInviteToken(id, workspace.id);
 
   const totalMin = Math.round(
     interview.questions.reduce((s, q) => s + q.timeLimitSec, 0) / 60,
@@ -34,14 +35,20 @@ export default async function BuildInterviewPage({
           <h1 className="font-display text-[28px] font-medium leading-none">Build an interview</h1>
         </div>
         <div className="flex gap-2.5">
-          <Link
-            href="/i/demo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center justify-center rounded-[9px] border border-[#E0D9C8] bg-surface px-3.5 text-[13px] font-semibold text-ink hover:bg-paper-2"
-          >
-            Preview as candidate
-          </Link>
+          {previewToken ? (
+            <Link
+              href={`/i/${previewToken}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center justify-center rounded-[9px] border border-[#E0D9C8] bg-surface px-3.5 text-[13px] font-semibold text-ink hover:bg-paper-2"
+            >
+              Preview as candidate
+            </Link>
+          ) : (
+            <span className="inline-flex h-9 cursor-not-allowed items-center justify-center rounded-[9px] border border-[#E0D9C8] bg-paper-2 px-3.5 text-[13px] font-semibold text-faint">
+              Preview as candidate
+            </span>
+          )}
           <PublishButton interviewId={id} />
         </div>
       </header>
@@ -53,9 +60,6 @@ export default async function BuildInterviewPage({
             <span className="text-[12.5px] font-semibold text-faint">≈ {totalMin} min total</span>
           </div>
           <QuestionBuilder interviewId={id} questions={interview.questions} />
-          <div className="mt-3">
-            <AddQuestionButton interviewId={id} />
-          </div>
         </div>
 
         <InterviewSettingsForm interview={interview} jobs={jobs} />

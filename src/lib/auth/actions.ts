@@ -110,7 +110,7 @@ export async function registerAction(formData: FormData): Promise<void> {
     },
   });
 
-  void sendWelcomeEmail({
+  await sendWelcomeEmail({
     to: user.email,
     name: parsed.data.name,
     companyName: parsed.data.company,

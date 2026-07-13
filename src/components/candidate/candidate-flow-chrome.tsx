@@ -2,7 +2,7 @@ import type { CandidatePhase } from "@/lib/types";
 import { ChevronLeft } from "lucide-react";
 import { LogoMark } from "@/components/ui/wordmark";
 
-const STEPS = ["Setup", "Practice", "Record", "Submit"] as const;
+const STEPS = ["Setup", "Prepare", "Record", "Submit"] as const;
 
 function stepIndex(phase: CandidatePhase): number {
   switch (phase) {

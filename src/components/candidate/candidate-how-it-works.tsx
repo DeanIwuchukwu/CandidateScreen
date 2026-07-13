@@ -11,12 +11,12 @@ const STEPS = [
     desc: "Test camera and mic — takes about a minute.",
   },
   {
-    title: "Warm up",
-    desc: "One practice question that isn't recorded.",
+    title: "Review the question",
+    desc: "A short countdown so you can collect your thoughts.",
   },
   {
     title: "Record your answers",
-    desc: "Up to 2 minutes each — re-record anytime.",
+    desc: "Timed takes — re-record if retakes are allowed.",
   },
 ] as const;
 

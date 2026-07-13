@@ -88,7 +88,15 @@ function CandidateFlowInner({ data }: Props) {
   }
 
   const handleStartSession = async () => {
-    await startCandidateSession(data.token);
+    const result = await startCandidateSession(data.token);
+    if (!result || !("ok" in result) || !result.ok) return;
+
+    // Share link forks a personal invite — navigate to that token URL
+    if (result.token && result.token !== data.token) {
+      window.location.assign(`/i/${result.token}`);
+      return;
+    }
+
     await persist("setup", 0);
   };
 
@@ -367,7 +375,12 @@ function CandidateFlowInner({ data }: Props) {
     const pct = thinkTime > 0 ? ((thinkTime - countdown) / thinkTime) * 100 : 100;
     return (
       <div className="min-h-screen bg-paper">
-        <CandidateFlowHeader workspaceName={data.interview.workspaceName} phase={phase} />
+        <CandidateFlowHeader
+          workspaceName={data.interview.workspaceName}
+          phase={phase}
+          onBack={handleBackToIntro}
+          backLabel="Overview"
+        />
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[200px_1fr] md:px-8">
           <div className="hidden md:block">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-faint-2">Questions</p>
@@ -437,7 +450,12 @@ function CandidateFlowInner({ data }: Props) {
     const progressPct = timeLimit > 0 ? Math.min(100, (elapsed / timeLimit) * 100) : 0;
     return (
       <div className="flex min-h-screen flex-col bg-[#1a211c] text-white">
-        <CandidateFlowHeader workspaceName={data.interview.workspaceName} phase={phase} />
+        <CandidateFlowHeader
+          workspaceName={data.interview.workspaceName}
+          phase={phase}
+          onBack={handleBackToIntro}
+          backLabel="Overview"
+        />
         <div className="flex items-center justify-between px-4 py-3 md:px-6">
           <div className="flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5">
             <span className="h-2 w-2 animate-pulse rounded-full bg-record" />
@@ -498,7 +516,12 @@ function CandidateFlowInner({ data }: Props) {
     const leftAfter = data.questions.length - qIndex - 1;
     return (
       <div className="min-h-screen bg-paper">
-        <CandidateFlowHeader workspaceName={data.interview.workspaceName} phase={phase} />
+        <CandidateFlowHeader
+          workspaceName={data.interview.workspaceName}
+          phase={phase}
+          onBack={handleBackToIntro}
+          backLabel="Overview"
+        />
         <div className="mx-auto grid max-w-5xl gap-8 px-4 py-8 md:grid-cols-2 md:px-8 md:py-10">
           <RecordedPlayback blob={playback} className="aspect-video w-full rounded-[14px] bg-black" />
           <div className="rounded-[14px] bg-[#FAF7F0] p-6 md:p-8">

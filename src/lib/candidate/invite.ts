@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import type { CandidatePhase, InvitePayload } from "@/lib/types";
-import { isPreviewInviteEmail } from "@/lib/candidate/internal-invites";
+import {
+  isPreviewInviteEmail,
+  isShareInviteEmail,
+} from "@/lib/candidate/internal-invites";
 import { isDevBypass } from "@/lib/dev/bypass";
 import { mockInvitePayload } from "@/lib/dev/mock-data";
 
@@ -34,7 +37,13 @@ export async function getInvitePayload(token: string): Promise<InvitePayload> {
     return emptyPayload(token, "expired", invite);
   }
 
-  if (invite.status === "COMPLETED" || invite.response?.submittedAt) {
+  // Share template link is never "completed" — each visitor forks their own session
+  const isShareTemplate = isShareInviteEmail(invite.email);
+
+  if (
+    !isShareTemplate &&
+    (invite.status === "COMPLETED" || invite.response?.submittedAt)
+  ) {
     return emptyPayload(token, "completed", invite);
   }
 
@@ -42,7 +51,7 @@ export async function getInvitePayload(token: string): Promise<InvitePayload> {
     return emptyPayload(token, "expired", invite);
   }
 
-  const response = invite.response;
+  const response = isShareTemplate ? null : invite.response;
   const uploadedQuestionIds = response?.answers.map((a) => a.questionId) ?? [];
   const retakesUsed: Record<string, number> = {};
   response?.answers.forEach((a) => {
@@ -72,13 +81,18 @@ export async function getInvitePayload(token: string): Promise<InvitePayload> {
       thinkTimeSec: q.thinkTimeSec,
     })),
     progress: {
-      phase: (response?.progressPhase as CandidatePhase) ?? "intro",
-      currentQuestionIndex: response?.currentQuestionIndex ?? 0,
+      phase: isShareTemplate
+        ? "intro"
+        : ((response?.progressPhase as CandidatePhase) ?? "intro"),
+      currentQuestionIndex: isShareTemplate
+        ? 0
+        : (response?.currentQuestionIndex ?? 0),
       retakesUsed,
       uploadedQuestionIds,
     },
     recruiterName: invite.interview.owner.name,
     isPreview: isPreviewInviteEmail(invite.email),
+    isShareTemplate,
   };
 }
 
@@ -137,6 +151,7 @@ function emptyPayload(
       uploadedQuestionIds: [],
     },
     recruiterName: invite?.interview.owner.name ?? "Recruiter",
+    isShareTemplate: false,
   };
 }
 

@@ -10,8 +10,12 @@ import {
 } from "@/lib/storage";
 import { ensureCandidateResponse } from "@/lib/candidate/invite";
 import { mockTranscript, type CandidatePhase } from "@/lib/types";
-import { isPreviewInviteEmail } from "@/lib/candidate/internal-invites";
+import {
+  isPreviewInviteEmail,
+  isShareInviteEmail,
+} from "@/lib/candidate/internal-invites";
 import { isDevBypass } from "@/lib/dev/bypass";
+import { createToken } from "@/lib/auth/crypto";
 
 async function isPreviewToken(token: string) {
   const invite = await prisma.invite.findUnique({
@@ -19,6 +23,35 @@ async function isPreviewToken(token: string) {
     select: { email: true },
   });
   return isPreviewInviteEmail(invite?.email);
+}
+
+/**
+ * Share-link template invites stay reusable. Each "Get started" forks a
+ * personal invite + response so concurrent candidates don't share progress.
+ */
+async function forkShareInviteSession(templateInvite: {
+  id: string;
+  interviewId: string;
+  expiresAt: Date | null;
+}) {
+  const forked = await prisma.invite.create({
+    data: {
+      interviewId: templateInvite.interviewId,
+      token: createToken(),
+      email: null,
+      candidateName: null,
+      expiresAt: templateInvite.expiresAt,
+      status: "STARTED",
+    },
+  });
+
+  const response = await ensureCandidateResponse(forked.id);
+  await prisma.candidateResponse.update({
+    where: { id: response.id },
+    data: { progressPhase: "setup", currentQuestionIndex: 0 },
+  });
+
+  return forked.token;
 }
 
 async function getInviteContext(token: string, questionId: string) {
@@ -30,6 +63,11 @@ async function getInviteContext(token: string, questionId: string) {
     },
   });
   if (!invite?.response) return { error: "Session not found" as const };
+
+  // Never write answers onto the reusable share template invite
+  if (isShareInviteEmail(invite.email)) {
+    return { error: "Session not found" as const };
+  }
 
   const question = invite.interview.questions.find((q) => q.id === questionId);
   if (!question) return { error: "Question not found" as const };
@@ -77,10 +115,18 @@ async function upsertAnswer(
   return { ok: true as const, videoUrl };
 }
 
-export async function startCandidateSession(token: string) {
+export async function startCandidateSession(
+  token: string,
+): Promise<{ ok: true; token?: string } | { error: string }> {
   if (isDevBypass()) return { ok: true };
   const invite = await prisma.invite.findUnique({ where: { token } });
   if (!invite) return { error: "Invite not found" };
+
+  // Public copy-link: mint a personal invite so each visitor has an independent session
+  if (isShareInviteEmail(invite.email)) {
+    const forkedToken = await forkShareInviteSession(invite);
+    return { ok: true, token: forkedToken };
+  }
 
   const response = await ensureCandidateResponse(invite.id);
   await prisma.invite.update({
@@ -105,6 +151,9 @@ export async function saveCandidateProgress(
     include: { response: true },
   });
   if (!invite?.response) return { error: "Session not found" };
+  if (isShareInviteEmail(invite.email)) {
+    return { error: "Use Get started to begin your own session" };
+  }
 
   await prisma.candidateResponse.update({
     where: { id: invite.response.id },
@@ -187,6 +236,9 @@ export async function submitCandidateInterview(token: string) {
     include: { response: true, interview: { include: { questions: true } } },
   });
   if (!invite?.response) return { error: "Session not found" };
+  if (isShareInviteEmail(invite.email)) {
+    return { error: "Session not found" };
+  }
 
   const answerCount = await prisma.answer.count({
     where: { responseId: invite.response.id },

@@ -36,6 +36,8 @@ export type InvitePayload = {
   };
   recruiterName: string;
   isPreview?: boolean;
+  /** Public copy-link template — Get started forks a personal session */
+  isShareTemplate?: boolean;
 };
 
 export const RUBRIC_CRITERIA = [

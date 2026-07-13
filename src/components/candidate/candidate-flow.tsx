@@ -26,6 +26,7 @@ import { CandidateHelpLink } from "@/components/candidate/candidate-help-dialog"
 import { CandidateHowItWorksLink, CANDIDATE_HOW_IT_WORKS_STEPS } from "@/components/candidate/candidate-how-it-works";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { APP_DOMAIN, SUPPORT_EMAIL } from "@/lib/brand";
 
 type Props = { data: InvitePayload };
 
@@ -128,7 +129,12 @@ function CandidateFlowInner({ data }: Props) {
           headers: { "Content-Type": "video/webm" },
         });
         if (!putRes.ok) {
-          setUploadError("Upload failed. Please try again.");
+          console.error("[upload] R2 PUT failed", putRes.status, await putRes.text().catch(() => ""));
+          setUploadError(
+            putRes.status === 403
+              ? "Upload rejected by storage (403). Check R2 credentials and CORS."
+              : `Upload failed (${putRes.status}). Please try again.`,
+          );
           return;
         }
         const result = await completeVideoUpload(
@@ -151,8 +157,15 @@ function CandidateFlowInner({ data }: Props) {
           return;
         }
       }
-    } catch {
-      setUploadError("Upload failed. Please try again.");
+    } catch (err) {
+      console.error("[upload]", err);
+      const networkBlocked =
+        err instanceof TypeError && /fetch/i.test(err.message);
+      setUploadError(
+        networkBlocked
+          ? "Upload blocked by the browser. Add CORS rules on your R2 bucket for this site."
+          : "Upload failed. Please try again.",
+      );
       return;
     } finally {
       setUploading(false);
@@ -605,7 +618,7 @@ function CameraBlockedScreen({ onRetry }: { onRetry: () => void }) {
           <p className="text-sm font-semibold text-muted">Browser permissions</p>
           <div className="mt-4 rounded-[12px] border border-hairline bg-white p-4 text-sm">
             <div className="flex items-center justify-between border-b border-hairline pb-3">
-              <span className="font-semibold">candidatescreen.com</span>
+              <span className="font-semibold">{APP_DOMAIN}</span>
               <span className="text-xs text-faint">Blocked</span>
             </div>
             <div className="mt-3 space-y-2 text-muted">
@@ -647,7 +660,7 @@ function ExpiredScreen({ data }: Props) {
         <p className="text-sm text-faint">{data.interview.workspaceName}</p>
         <Button className="mt-8">Request a new link</Button>
         <p className="mt-4 text-sm text-muted">
-          Or email your recruiter at hello@candidatescreen.com
+          Or email your recruiter at {SUPPORT_EMAIL}
         </p>
       </div>
     </div>

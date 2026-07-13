@@ -24,6 +24,8 @@ let s3Client: S3Client | null = null;
 function getS3Client(): S3Client {
   if (!s3Client) {
     const accountId = process.env.R2_ACCOUNT_ID!;
+    // WHEN_REQUIRED: AWS SDK v3 defaults enable CRC32 checksums that break
+    // Cloudflare R2 PutObject / browser presigned uploads (403 SignatureDoesNotMatch).
     s3Client = new S3Client({
       region: "auto",
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
@@ -31,6 +33,8 @@ function getS3Client(): S3Client {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       },
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
     });
   }
   return s3Client;

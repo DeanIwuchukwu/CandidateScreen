@@ -3,7 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
+      // Video answers via FormData fallback (R2 uses direct PUT and does not use this limit)
+      bodySizeLimit: "50mb",
     },
   },
 };

@@ -155,6 +155,14 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
           onClose={() => setMenuOpen(false)}
           triggerRef={triggerRef}
         >
+          <Link
+            href={`/app/interviews/${interview.id}/build`}
+            role="menuitem"
+            onClick={() => setMenuOpen(false)}
+            className="block w-full px-3 py-2 text-left text-[13px] font-semibold text-ink hover:bg-paper-2"
+          >
+            Edit interview
+          </Link>
           <button
             type="button"
             role="menuitem"

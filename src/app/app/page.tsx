@@ -165,31 +165,22 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <div className="flex flex-col gap-2.5">
-              {active.map((interview) => {
-                const responded = interview.invites.length;
-                const invited = interview._count.invites;
-                const newCount =
-                  "newCount" in interview
-                    ? (interview as { newCount: number }).newCount
-                    : 0;
-
-                return (
+              {active.map((interview) => (
                   <div key={interview.id} className="rounded-[12px] border border-hairline p-4">
                     <div className="flex items-baseline justify-between">
                       <div className="text-[15px] font-semibold">{interview.title}</div>
                       <span
-                        className={`text-xs font-semibold ${newCount > 0 ? "text-primary" : "text-faint"}`}
+                        className={`text-xs font-semibold ${interview.newCount > 0 ? "text-primary" : "text-faint"}`}
                       >
-                        {newCount} new
+                        {interview.newCount} new
                       </span>
                     </div>
                     <div className="mb-2.5 mt-1.5 text-xs font-medium text-faint">
-                      {invited} invited · {responded} responded
+                      {interview.invited} invited · {interview.responded} responded
                     </div>
-                    <ResponseProgress responded={responded} invited={invited} />
+                    <ResponseProgress responded={interview.responded} invited={interview.invited} />
                   </div>
-                );
-              })}
+                ))}
               <Link
                 href="/app/interviews/new"
                 className="flex items-center justify-center gap-2 rounded-[12px] border border-dashed border-[#DCD5C4] p-4 text-[13px] font-semibold text-primary hover:border-primary"

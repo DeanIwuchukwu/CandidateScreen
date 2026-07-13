@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SUPPORT_EMAIL } from "@/lib/brand";
 
-const HELP_EMAIL = "hello@candidatescreen.com";
+const HELP_EMAIL = SUPPORT_EMAIL;
 
 export function CandidateHelpLink({
   label = "Get help ›",

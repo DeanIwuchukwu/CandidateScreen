@@ -178,7 +178,7 @@ export function PublicJobContent({
         </div>
         <div className="flex items-center gap-2 text-xs font-medium text-faint">
           <span className="text-primary">●</span>
-          Powered by Candidate Screen
+          Powered by Talang Flow
         </div>
       </header>
 
@@ -254,7 +254,7 @@ export function PublicJobContent({
 
       <footer className="flex items-center justify-between border-t border-hairline-3 bg-surface px-14 py-[22px] text-[12.5px] font-medium text-faint">
         <span>© 2026 {workspaceName} · Careers</span>
-        <span>Powered by Candidate Screen</span>
+        <span>Powered by Talang Flow</span>
       </footer>
     </div>
   );

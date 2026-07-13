@@ -40,8 +40,8 @@ export function Wordmark({
     <Link href={href} className={cn("inline-flex items-center gap-2.5", className)}>
       <LogoMark light={light} size={28} />
       <span className="font-display text-[17px] font-medium leading-none tracking-tight">
-        <span className={light ? "text-white" : "text-ink"}>Candidate </span>
-        <span className={light ? "text-[#7FB79A]" : "text-primary"}>Screen</span>
+        <span className={light ? "text-white" : "text-ink"}>Talang </span>
+        <span className={light ? "text-[#7FB79A]" : "text-primary"}>Flow</span>
       </span>
     </Link>
   );

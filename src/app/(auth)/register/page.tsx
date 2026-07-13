@@ -31,7 +31,7 @@ export default async function RegisterPage({
           <div className="w-full max-w-[380px]">
             <h1 className="font-display text-[30px] font-medium leading-tight">Create your account</h1>
             <p className="mt-2 text-[14.5px] text-muted">
-              Join <strong className="text-ink-2">{invite.workspace.name}</strong> on Candidate Screen.
+              Join <strong className="text-ink-2">{invite.workspace.name}</strong> on Talang Flow.
             </p>
 
             {error === "invalid" && (

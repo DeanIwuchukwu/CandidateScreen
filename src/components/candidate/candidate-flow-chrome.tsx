@@ -54,8 +54,8 @@ export function CandidateFlowHeader({
           <div className="flex items-center gap-2">
             <LogoMark size={24} />
             <span className="font-display text-[15px] font-medium tracking-tight">
-              <span className="text-ink">Candidate </span>
-              <span className="text-primary">Screen</span>
+              <span className="text-ink">Talang </span>
+              <span className="text-primary">Flow</span>
             </span>
           </div>
         </div>

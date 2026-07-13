@@ -70,7 +70,7 @@ export default async function LoginPage({
           </form>
 
           <p className="mt-5 text-center text-[13.5px] text-muted">
-            New to Candidate Screen?{" "}
+            New to Talang Flow?{" "}
             <Link href="/register" className="font-semibold text-primary">
               Create an account
             </Link>

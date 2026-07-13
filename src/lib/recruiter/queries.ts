@@ -122,14 +122,35 @@ export async function getReviewQueue(workspaceId: string, limit = 5) {
 export async function getActiveInterviews(workspaceId: string) {
   if (isDevBypass()) return mockActiveInterviews();
 
-  return prisma.interview.findMany({
+  const interviews = await prisma.interview.findMany({
     where: { workspaceId, status: "ACTIVE" },
-    include: {
-      _count: { select: { invites: true } },
-      invites: { where: { status: "COMPLETED" }, select: { id: true } },
-    },
     orderBy: { updatedAt: "desc" },
   });
+
+  return Promise.all(
+    interviews.map(async (interview) => {
+      const [invited, responded] = await Promise.all([
+        prisma.invite.count({
+          where: { interviewId: interview.id, ...realCandidateInviteFilter },
+        }),
+        prisma.invite.count({
+          where: {
+            interviewId: interview.id,
+            status: "COMPLETED",
+            ...realCandidateInviteFilter,
+          },
+        }),
+      ]);
+
+      return {
+        id: interview.id,
+        title: interview.title,
+        invited,
+        responded,
+        newCount: 0,
+      };
+    }),
+  );
 }
 
 export async function getInterviews(workspaceId: string, status?: InterviewStatus) {

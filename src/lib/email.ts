@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { EMAIL_FROM_FALLBACK, PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/brand";
 
 type SendEmailInput = {
   to: string;
@@ -26,7 +27,7 @@ function getResendClient(): Resend | null {
 }
 
 function emailFrom() {
-  return process.env.EMAIL_FROM ?? "Candidate Screen <onboarding@resend.dev>";
+  return process.env.EMAIL_FROM ?? EMAIL_FROM_FALLBACK;
 }
 
 function appUrl() {
@@ -37,9 +38,9 @@ function emailLayout(content: string) {
   return `<!DOCTYPE html>
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1a2b22; max-width: 560px; margin: 0 auto; padding: 24px;">
-  <div style="margin-bottom: 24px; font-size: 18px; font-weight: 600; color: #1C6B47;">Candidate Screen</div>
+  <div style="margin-bottom: 24px; font-size: 18px; font-weight: 600; color: #1C6B47;">${PRODUCT_NAME}</div>
   ${content}
-  <p style="margin-top: 32px; font-size: 12px; color: #6b7c72;">Candidate Screen · Async video interviews</p>
+  <p style="margin-top: 32px; font-size: 12px; color: #6b7c72;">${PRODUCT_NAME} · ${PRODUCT_TAGLINE}</p>
 </body>
 </html>`;
 }
@@ -73,18 +74,18 @@ export async function sendWelcomeEmail(input: {
   companyName: string;
 }) {
   const dashboardUrl = `${appUrl()}/app`;
-  const subject = "Welcome to Candidate Screen";
+  const subject = `Welcome to ${PRODUCT_NAME}`;
   const text = `Hi ${input.name},
 
-Welcome to Candidate Screen! Your workspace for ${input.companyName} is ready.
+Welcome to ${PRODUCT_NAME}! Your workspace for ${input.companyName} is ready.
 
 Open your dashboard: ${dashboardUrl}
 
-— The Candidate Screen team`;
+— The ${PRODUCT_NAME} team`;
 
   const html = emailLayout(`
     <p>Hi ${input.name},</p>
-    <p>Welcome to <strong>Candidate Screen</strong>! Your workspace for <strong>${input.companyName}</strong> is ready.</p>
+    <p>Welcome to <strong>${PRODUCT_NAME}</strong>! Your workspace for <strong>${input.companyName}</strong> is ready.</p>
     <p style="margin: 28px 0;">
       <a href="${dashboardUrl}" style="display: inline-block; background: #1C6B47; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;">Open your dashboard</a>
     </p>
@@ -95,7 +96,7 @@ Open your dashboard: ${dashboardUrl}
 }
 
 export async function sendPasswordResetEmail(input: { to: string; resetUrl: string }) {
-  const subject = "Reset your Candidate Screen password";
+  const subject = `Reset your ${PRODUCT_NAME} password`;
   const text = `Reset your password using this link (expires in 1 hour):
 
 ${input.resetUrl}
@@ -103,7 +104,7 @@ ${input.resetUrl}
 If you didn't request this, you can ignore this email.`;
 
   const html = emailLayout(`
-    <p>You requested a password reset for your Candidate Screen account.</p>
+    <p>You requested a password reset for your ${PRODUCT_NAME} account.</p>
     <p style="margin: 28px 0;">
       <a href="${input.resetUrl}" style="display: inline-block; background: #1C6B47; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;">Reset password</a>
     </p>
@@ -121,7 +122,7 @@ export async function sendTeamInviteEmail(input: {
   joinUrl: string;
 }) {
   const roleLabel = input.role === "ADMIN" ? "Admin" : "Recruiter";
-  const subject = `Join ${input.workspaceName} on Candidate Screen`;
+  const subject = `Join ${input.workspaceName} on ${PRODUCT_NAME}`;
   const text = `${input.inviterName} invited you to join ${input.workspaceName} as ${roleLabel}.
 
 Accept the invite: ${input.joinUrl}
@@ -129,7 +130,7 @@ Accept the invite: ${input.joinUrl}
 This link expires in 7 days.`;
 
   const html = emailLayout(`
-    <p><strong>${input.inviterName}</strong> invited you to join <strong>${input.workspaceName}</strong> as <strong>${roleLabel}</strong>.</p>
+    <p><strong>${input.inviterName}</strong> invited you to join <strong>${input.workspaceName}</strong> on <strong>${PRODUCT_NAME}</strong> as <strong>${roleLabel}</strong>.</p>
     <p style="margin: 28px 0;">
       <a href="${input.joinUrl}" style="display: inline-block; background: #1C6B47; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;">Accept invite</a>
     </p>
@@ -141,7 +142,7 @@ This link expires in 7 days.`;
 
 export async function sendInterviewInviteEmail(payload: InviteEmailPayload) {
   const subject = `Video interview invitation — ${payload.jobTitle}`;
-  const text = `${payload.message}\n\nRecord your interview: ${payload.inviteUrl}\n\n— ${payload.senderName}`;
+  const text = `${payload.message}\n\nRecord your interview: ${payload.inviteUrl}\n\n— ${payload.senderName} via ${PRODUCT_NAME}`;
 
   const html = emailLayout(`
     <p style="white-space: pre-wrap;">${payload.message.replace(/\n/g, "<br>")}</p>

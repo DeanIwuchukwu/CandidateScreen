@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ContactInfoRow } from "@/components/marketing/contact-info-row";
 import { ContactFooter } from "@/components/marketing/contact-footer";
 import { submitContactForm } from "@/lib/marketing/actions";
+import { SUPPORT_EMAIL } from "@/lib/brand";
 
 export default async function ContactPage({
   searchParams,
@@ -28,7 +29,7 @@ export default async function ContactPage({
           </p>
           <div className="mt-9 flex flex-col gap-5">
             <ContactInfoRow icon={Mail} title="Email us">
-              hello@candidatescreen.com
+              {SUPPORT_EMAIL}
             </ContactInfoRow>
             <ContactInfoRow icon={Clock} title="Response time">
               Within a few hours, Mon–Fri

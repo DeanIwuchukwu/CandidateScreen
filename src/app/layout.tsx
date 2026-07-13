@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PRODUCT_NAME } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: {
-    default: "Candidate Screen",
-    template: "%s · Candidate Screen",
+    default: PRODUCT_NAME,
+    template: `%s · ${PRODUCT_NAME}`,
   },
   description:
     "Async video interviews that put candidates at ease and give your team hours back.",

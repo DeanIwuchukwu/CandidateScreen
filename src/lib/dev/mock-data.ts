@@ -290,29 +290,24 @@ export function mockReviewQueue() {
 export function mockActiveInterviews() {
   return [
     {
-      ...MOCK_INTERVIEW,
+      id: MOCK_INTERVIEW.id,
       title: "Product Designer",
-      _count: { invites: 32 },
-      invites: Array.from({ length: 27 }, (_, i) => ({ id: `inv-${i}` })),
+      invited: 32,
+      responded: 27,
       newCount: 8,
     },
     {
-      ...MOCK_INTERVIEW,
       id: "demo-fe",
       title: "Frontend Engineer",
-      questions: MOCK_QUESTIONS.slice(0, 4),
-      createdAt: new Date("2025-05-28"),
-      _count: { invites: 24 },
-      invites: Array.from({ length: 19 }, (_, i) => ({ id: `fe-${i}` })),
+      invited: 24,
+      responded: 19,
       newCount: 3,
     },
     {
-      ...MOCK_INTERVIEW,
       id: "demo-cs",
       title: "Customer Success Lead",
-      createdAt: new Date("2025-05-20"),
-      _count: { invites: 15 },
-      invites: Array.from({ length: 11 }, (_, i) => ({ id: `cs-${i}` })),
+      invited: 15,
+      responded: 11,
       newCount: 0,
     },
   ];

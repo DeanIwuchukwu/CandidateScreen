@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { requireSessionUser } from "@/lib/auth/session";
 import {
   getCandidatesPaginated,
-  getCandidateRolesPaginated,
   getCandidateStageCounts,
   getInterview,
   getUserWorkspace,
@@ -19,18 +18,13 @@ import {
   Breadcrumb,
   CountTabs,
   FilterButton,
-  InterviewStatusDot,
-  PageHeader,
-  ResponseProgress,
   SearchField,
   SortLabel,
   StatusPill,
-  TABLE_GRID_PIPELINE,
-  TABLE_GRID_ROLES,
   TableHeader,
   TablePagination,
 } from "@/components/recruiter/recruiter-ui";
-import type { CandidateStage, InterviewStatus } from "@prisma/client";
+import type { CandidateStage } from "@prisma/client";
 
 const stages: Array<{ key: CandidateStage | "ALL"; label: string }> = [
   { key: "TO_REVIEW", label: "To review" },
@@ -39,6 +33,9 @@ const stages: Array<{ key: CandidateStage | "ALL"; label: string }> = [
   { key: "PASSED", label: "Passed" },
   { key: "ALL", label: "All" },
 ];
+
+const TABLE_GRID_SCOPED = "2.4fr 1.1fr 1.3fr 1.2fr 0.6fr";
+const TABLE_GRID_GLOBAL = "2fr 1.5fr 1.1fr 1.2fr 1.1fr 0.6fr";
 
 type CandidateRow = Awaited<
   ReturnType<typeof getCandidatesPaginated>
@@ -49,10 +46,48 @@ type CandidateRow = Awaited<
   reviewed?: boolean;
 };
 
-function pipelineUrl(interviewId: string, stage?: string) {
-  const params = new URLSearchParams({ interview: interviewId });
-  if (stage) params.set("stage", stage);
-  return `/app/candidates?${params.toString()}`;
+function candidatesUrl(opts: { interviewId?: string; stage?: string }) {
+  const params = new URLSearchParams();
+  if (opts.interviewId) params.set("interview", opts.interviewId);
+  if (opts.stage) params.set("stage", opts.stage);
+  const q = params.toString();
+  return q ? `/app/candidates?${q}` : "/app/candidates";
+}
+
+function initialsFromName(name: string | null | undefined) {
+  if (!name?.trim()) return "??";
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function rowPresentation(c: CandidateRow) {
+  const statusLabel =
+    c.statusLabel ??
+    (c.submittedAt
+      ? c.overallRating || c.decision
+        ? "Reviewed"
+        : "New"
+      : "In progress");
+  const avatar = c.avatar ?? {
+    initials: initialsFromName(c.invite.candidateName),
+    color: "#1C6B47",
+  };
+  const isReviewed = c.reviewed ?? statusLabel === "Reviewed";
+  const inProgress = statusLabel === "In progress";
+  const pillTone: "new" | "started" | "reviewed" | "progress" | "muted" =
+    statusLabel === "Reviewed"
+      ? "reviewed"
+      : statusLabel === "In progress"
+        ? "progress"
+        : statusLabel === "Started"
+          ? "started"
+          : "new";
+  return { statusLabel, avatar, isReviewed, inProgress, pillTone };
 }
 
 export default async function CandidatesPage({
@@ -62,16 +97,16 @@ export default async function CandidatesPage({
 }) {
   const user = await requireSessionUser();
   const { workspace } = await getUserWorkspace(user.id);
-  const { interview: interviewId, stage = "TO_REVIEW", page: pageParam } =
+  const { interview: interviewId, stage: stageParam, page: pageParam } =
     await searchParams;
   const page = parsePage(pageParam);
+  const scoped = Boolean(interviewId);
+  const stage = stageParam ?? (scoped ? "TO_REVIEW" : "ALL");
 
-  if (!interviewId) {
-    return <CandidatesRoleIndex workspaceId={workspace.id} page={page} />;
-  }
-
-  const interview = await getInterview(workspace.id, interviewId);
-  if (!interview) notFound();
+  const interview = interviewId
+    ? await getInterview(workspace.id, interviewId)
+    : null;
+  if (interviewId && !interview) notFound();
 
   const [candidatesPage, counts, pipeline] = await Promise.all([
     getCandidatesPaginated(workspace.id, {
@@ -80,16 +115,24 @@ export default async function CandidatesPage({
       page,
     }),
     getCandidateStageCounts(workspace.id, interviewId),
-    getInterviewPipelineStats(workspace.id, interviewId),
+    interviewId
+      ? getInterviewPipelineStats(workspace.id, interviewId)
+      : Promise.resolve(null),
   ]);
 
   const rows = candidatesPage.items as CandidateRow[];
-  const roleTitle = interview.title;
+  const roleTitle = interview?.title ?? null;
   const invited = pipeline?.invited ?? 0;
   const started = pipeline?.started ?? 0;
   const shareToken = pipeline?.shareToken ?? null;
+  const grid = scoped ? TABLE_GRID_SCOPED : TABLE_GRID_GLOBAL;
 
-  if (counts.TO_REVIEW === 0 && stage === "TO_REVIEW" && page === 1) {
+  if (
+    scoped &&
+    counts.TO_REVIEW === 0 &&
+    stage === "TO_REVIEW" &&
+    page === 1
+  ) {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center p-8 text-center">
         <div className="relative mb-6 grid h-[88px] w-[88px] place-items-center rounded-[22px] bg-paper-2">
@@ -106,34 +149,33 @@ export default async function CandidatesPage({
               <strong className="text-ink">
                 {invited} candidate{invited === 1 ? "" : "s"}
               </strong>
-              . Their answers will land here as they record — usually within a day or two.
-              We&apos;ll email you when the first one arrives.
+              . Their answers will land here as they record — usually within a day
+              or two. We&apos;ll email you when the first one arrives.
             </>
           ) : (
             <>
-              Share your invite link or send personal invites. Responses will land here as
-              candidates record — we&apos;ll email you when the first one arrives.
+              Share your invite link or send personal invites. Responses will land
+              here as candidates record — we&apos;ll email you when the first one
+              arrives.
             </>
           )}
         </p>
         <CandidatesPipelineActions
-          interviewId={interviewId}
-          interviewTitle={roleTitle}
+          interviewId={interviewId!}
+          interviewTitle={roleTitle!}
           shareToken={shareToken}
           variant="empty"
         />
         {invited > 0 && (
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <p className="text-[13px] font-medium text-faint">
-              {invited} invited · {started} started
-            </p>
-          </div>
+          <p className="mt-8 text-[13px] font-medium text-faint">
+            {invited} invited · {started} started
+          </p>
         )}
         <Link
           href="/app/candidates"
           className="mt-6 text-sm font-semibold text-primary hover:underline"
         >
-          ← All roles
+          ← All candidates
         </Link>
       </div>
     );
@@ -142,31 +184,44 @@ export default async function CandidatesPage({
   return (
     <>
       <div className="px-8 pt-[22px]">
-        <Breadcrumb
-          items={[
-            { label: "Candidates", href: "/app/candidates" },
-            { label: roleTitle, active: true },
-          ]}
-        />
+        {scoped && roleTitle ? (
+          <Breadcrumb
+            items={[
+              { label: "Candidates", href: "/app/candidates" },
+              { label: roleTitle, active: true },
+            ]}
+          />
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="font-display text-[28px] font-medium leading-none">{roleTitle}</h1>
-          <div className="flex gap-2.5">
-            <Button variant="secondary" size="sm">
-              Export
-            </Button>
-            <CandidatesPipelineActions
-              interviewId={interviewId}
-              interviewTitle={roleTitle}
-              shareToken={shareToken}
-              variant="header"
-            />
+          <div>
+            <h1 className="font-display text-[28px] font-medium leading-none">
+              {scoped && roleTitle ? roleTitle : "Candidates"}
+            </h1>
+            {!scoped && (
+              <p className="mt-2 text-[13px] font-medium text-faint">
+                All roles · {counts.ALL} candidate{counts.ALL === 1 ? "" : "s"}
+              </p>
+            )}
           </div>
+          {scoped && interviewId && roleTitle && (
+            <div className="flex gap-2.5">
+              <Button variant="secondary" size="sm">
+                Export
+              </Button>
+              <CandidatesPipelineActions
+                interviewId={interviewId}
+                interviewTitle={roleTitle}
+                shareToken={shareToken}
+                variant="header"
+              />
+            </div>
+          )}
         </div>
 
         <CountTabs
           tabs={stages.map((s) => ({
             label: s.label,
-            href: pipelineUrl(interviewId, s.key),
+            href: candidatesUrl({ interviewId, stage: s.key }),
             count: counts[s.key],
             active: stage === s.key,
           }))}
@@ -176,151 +231,103 @@ export default async function CandidatesPage({
       <div className="px-8 pb-7 pt-[18px]">
         <div className="mb-3.5 flex items-center gap-2.5">
           <SearchField placeholder="Search name" />
-          <FilterButton>All sources ▾</FilterButton>
+          {!scoped && <FilterButton>All roles ▾</FilterButton>}
           <FilterButton>Score ▾</FilterButton>
           <SortLabel>Sorted by · Most recent</SortLabel>
         </div>
 
         <div className="overflow-hidden rounded-[14px] border border-hairline">
           <TableHeader
-            columns={["Candidate", "Status", "Rating", "Submitted", ""]}
-            gridTemplate={TABLE_GRID_PIPELINE}
+            columns={
+              scoped
+                ? ["Candidate", "Status", "Rating", "Submitted", ""]
+                : ["Candidate", "Role", "Status", "Rating", "Submitted", ""]
+            }
+            gridTemplate={grid}
           />
-          {rows.map((c) => {
-            const qTotal = 5;
-            const avatar = c.avatar ?? { initials: "??", color: "#1C6B47" };
-            const statusLabel = c.statusLabel ?? "New";
-            const pillTone =
-              statusLabel === "Reviewed"
-                ? "reviewed"
-                : statusLabel === "In progress"
-                  ? "progress"
-                  : statusLabel === "Started"
-                    ? "started"
-                    : "new";
-            const isReviewed = c.reviewed ?? false;
-            const inProgress = statusLabel === "In progress";
+          {rows.length === 0 ? (
+            <div className="px-[22px] py-12 text-center text-sm text-muted">
+              No candidates in this stage yet.
+            </div>
+          ) : (
+            rows.map((c) => {
+              const { statusLabel, avatar, isReviewed, inProgress, pillTone } =
+                rowPresentation(c);
+              const answered = c.answers.length;
 
-            return (
-              <div
-                key={c.id}
-                className={`grid items-center gap-4 border-b border-hairline-2 px-[22px] py-3.5 last:border-0 ${isReviewed ? "bg-[#FCFAF5]" : ""}`}
-                style={{ gridTemplateColumns: TABLE_GRID_PIPELINE }}
-              >
-                <div className="flex items-center gap-3">
-                  <AvatarCircle initials={avatar.initials} color={avatar.color} />
-                  <div>
-                    <div className="text-sm font-semibold">
-                      {c.invite.candidateName ?? "Candidate"}
-                    </div>
-                    <div className="text-xs font-medium text-faint">
-                      {inProgress
-                        ? `${c.answers.length}/${qTotal} answered · in progress`
-                        : `${qTotal}/${qTotal} answered${c.durationMin ? ` · ${c.durationMin} min` : ""}`}
+              return (
+                <div
+                  key={c.id}
+                  className={`grid items-center gap-4 border-b border-hairline-2 px-[22px] py-3.5 last:border-0 ${isReviewed ? "bg-[#FCFAF5]" : ""}`}
+                  style={{ gridTemplateColumns: grid }}
+                >
+                  <div className="flex items-center gap-3">
+                    <AvatarCircle initials={avatar.initials} color={avatar.color} />
+                    <div>
+                      <div className="text-sm font-semibold">
+                        {c.invite.candidateName ?? "Candidate"}
+                      </div>
+                      <div className="text-xs font-medium text-faint">
+                        {inProgress
+                          ? `${answered} answered · in progress`
+                          : `${answered} answered${c.durationMin ? ` · ${c.durationMin} min` : ""}`}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <StatusPill tone={pillTone}>{statusLabel}</StatusPill>
-                <div>
-                  {c.overallRating ? (
-                    <StarRating value={c.overallRating} readOnly size={15} />
-                  ) : (
-                    <span className="text-xs font-medium text-[#E4DDCD]">
-                      {inProgress ? "—" : "Not rated"}
-                    </span>
+                  {!scoped && (
+                    <div className="min-w-0">
+                      <div className="truncate text-[13px] font-semibold">
+                        {c.invite.interview.title}
+                      </div>
+                    </div>
                   )}
-                </div>
-                <span className="text-[13px] font-medium text-muted">
-                  {c.submittedAt ? formatRelativeTime(c.submittedAt) : "—"}
-                </span>
-                <div className="text-right">
-                  {inProgress ? (
-                    <Button variant="secondary" size="sm" disabled className="text-faint-2">
-                      Pending
-                    </Button>
-                  ) : isReviewed ? (
-                    <Link href={`/app/candidates/${c.id}/review`}>
-                      <Button variant="secondary" size="sm">
-                        Open
+                  <StatusPill tone={pillTone}>{statusLabel}</StatusPill>
+                  <div>
+                    {c.overallRating ? (
+                      <StarRating value={c.overallRating} readOnly size={15} />
+                    ) : (
+                      <span className="text-xs font-medium text-[#E4DDCD]">
+                        {inProgress ? "—" : "Not rated"}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[13px] font-medium text-muted">
+                    {c.submittedAt ? formatRelativeTime(c.submittedAt) : "—"}
+                  </span>
+                  <div className="text-right">
+                    {inProgress ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled
+                        className="text-faint-2"
+                      >
+                        Pending
                       </Button>
-                    </Link>
-                  ) : (
-                    <Link href={`/app/candidates/${c.id}/review`}>
-                      <Button size="sm">Review</Button>
-                    </Link>
-                  )}
+                    ) : isReviewed ? (
+                      <Link href={`/app/candidates/${c.id}/review`}>
+                        <Button variant="secondary" size="sm">
+                          Open
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link href={`/app/candidates/${c.id}/review`}>
+                        <Button size="sm">Review</Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
           <TablePagination
             pagination={candidatesPage}
             basePath="/app/candidates"
-            query={{ interview: interviewId, stage }}
+            query={{
+              ...(interviewId ? { interview: interviewId } : {}),
+              stage,
+            }}
           />
-        </div>
-      </div>
-    </>
-  );
-}
-
-async function CandidatesRoleIndex({
-  workspaceId,
-  page,
-}: {
-  workspaceId: string;
-  page: number;
-}) {
-  const rolesPage = await getCandidateRolesPaginated(workspaceId, page);
-  const roles = rolesPage.items;
-  const totalToReview = roles.reduce((sum, r) => sum + r.toReview, 0);
-
-  return (
-    <>
-      <PageHeader
-        title="Candidates"
-        subtitle={`${rolesPage.total} roles · ${totalToReview} awaiting review`}
-      />
-
-      <div className="px-8 pb-7 pt-[18px]">
-        <div className="mb-3.5 flex items-center gap-2.5">
-          <SearchField placeholder="Search roles" />
-          <SortLabel>Sorted by · Most recent</SortLabel>
-        </div>
-
-        <div className="overflow-hidden rounded-[14px] border border-hairline">
-          <TableHeader
-            columns={["Role", "Status", "To review", "Responses", ""]}
-            gridTemplate={TABLE_GRID_ROLES}
-          />
-          {roles.map((role) => (
-            <Link
-              key={role.id}
-              href={pipelineUrl(role.id)}
-              className="grid items-center gap-4 border-b border-hairline-2 px-[22px] py-[15px] last:border-0 hover:bg-reviewed"
-              style={{ gridTemplateColumns: TABLE_GRID_ROLES }}
-            >
-              <div>
-                <div className="text-[14.5px] font-semibold">{role.title}</div>
-                <div className="text-xs font-medium text-faint">
-                  {role.responded} responded · {role.invited} invited
-                </div>
-              </div>
-              <InterviewStatusDot status={role.status as InterviewStatus} />
-              <span
-                className={`text-[13px] font-semibold ${role.toReview > 0 ? "text-primary" : "text-faint"}`}
-              >
-                {role.toReview > 0 ? role.toReview : "—"}
-              </span>
-              <ResponseProgress
-                responded={role.responded}
-                invited={role.invited}
-                closed={role.status === "CLOSED"}
-              />
-              <div className="text-right text-lg font-bold text-faint-2">›</div>
-            </Link>
-          ))}
-          <TablePagination pagination={rolesPage} basePath="/app/candidates" />
         </div>
       </div>
     </>

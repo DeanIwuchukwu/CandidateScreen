@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { AlertCircle, Check, Clock } from "lucide-react";
 import type { InvitePayload, CandidatePhase } from "@/lib/types";
 import {
   completeVideoUpload,
   prepareVideoUpload,
+  saveCandidateIdentity,
   saveCandidateProgress,
   startCandidateSession,
   submitCandidateInterview,
@@ -26,6 +27,7 @@ import { CandidateHelpLink } from "@/components/candidate/candidate-help-dialog"
 import { CandidateHowItWorksLink, CANDIDATE_HOW_IT_WORKS_STEPS } from "@/components/candidate/candidate-how-it-works";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { APP_DOMAIN, SUPPORT_EMAIL } from "@/lib/brand";
 
 type Props = { data: InvitePayload };
@@ -39,13 +41,24 @@ export function CandidateFlow({ data }: Props) {
 }
 
 function CandidateFlowInner({ data }: Props) {
-  const [phase, setPhase] = useState<CandidatePhase>(data.progress.phase);
+  const initialPhase: CandidatePhase =
+    data.needsIdentity &&
+    data.progress.phase !== "intro" &&
+    data.progress.phase !== "done"
+      ? "identity"
+      : data.progress.phase;
+
+  const [phase, setPhase] = useState<CandidatePhase>(initialPhase);
   const [qIndex, setQIndex] = useState(data.progress.currentQuestionIndex);
   const [retakesUsed, setRetakesUsed] = useState(data.progress.retakesUsed);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [localBlob, setLocalBlob] = useState<Blob | null>(null);
   const [takeFailed, setTakeFailed] = useState(false);
+  const [identityName, setIdentityName] = useState(data.candidateName ?? "");
+  const [identityEmail, setIdentityEmail] = useState("");
+  const [identityError, setIdentityError] = useState<string | null>(null);
+  const [identitySaving, setIdentitySaving] = useState(false);
 
   const question = data.questions[qIndex];
   const retakesLeft = question
@@ -107,7 +120,7 @@ function CandidateFlowInner({ data }: Props) {
     void finishRecording();
   }, [phase, recording, remaining, finishRecording]);
 
-  if (permError === "denied" && phase !== "intro") {
+  if (permError === "denied" && phase !== "intro" && phase !== "identity") {
     return <CameraBlockedScreen onRetry={() => refresh()} />;
   }
 
@@ -231,6 +244,25 @@ function CandidateFlowInner({ data }: Props) {
     restart();
   };
 
+  const handleSaveIdentity = async (e: FormEvent) => {
+    e.preventDefault();
+    setIdentityError(null);
+    setIdentitySaving(true);
+    try {
+      const result = await saveCandidateIdentity(data.token, {
+        name: identityName,
+        email: identityEmail,
+      });
+      if (!result.ok) {
+        setIdentityError(result.error ?? "Something went wrong.");
+        return;
+      }
+      await persist("setup", 0);
+    } finally {
+      setIdentitySaving(false);
+    }
+  };
+
   if (phase === "intro") {
     return (
       <div className="min-h-screen bg-paper">
@@ -302,6 +334,65 @@ function CandidateFlowInner({ data }: Props) {
               Recordings are shared only with the {data.interview.workspaceName} hiring team.
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "identity") {
+    return (
+      <div className="min-h-screen bg-paper">
+        <CandidateFlowHeader
+          workspaceName={data.interview.workspaceName}
+          phase={phase}
+          showStepper={false}
+          onBack={handleBackToIntro}
+          backLabel="Overview"
+        />
+        <div className="mx-auto max-w-lg px-4 py-10 md:px-8 md:py-14">
+          <p className="text-sm font-semibold text-primary">Before you begin</p>
+          <h1 className="mt-3 font-display text-3xl font-medium leading-tight md:text-4xl">
+            Tell us who you are
+          </h1>
+          <p className="mt-3 text-sm text-muted">
+            We&apos;ll use this so {data.interview.workspaceName} can review your answers and send you
+            a confirmation email.
+          </p>
+          <form onSubmit={handleSaveIdentity} className="mt-8 space-y-4">
+            <label className="block text-[12.5px] font-semibold text-muted">
+              Full name
+              <Input
+                className="mt-1.5"
+                name="name"
+                autoComplete="name"
+                required
+                value={identityName}
+                onChange={(e) => setIdentityName(e.target.value)}
+                placeholder="Jordan Reyes"
+              />
+            </label>
+            <label className="block text-[12.5px] font-semibold text-muted">
+              Email
+              <Input
+                className="mt-1.5"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={identityEmail}
+                onChange={(e) => setIdentityEmail(e.target.value)}
+                placeholder="you@company.com"
+              />
+            </label>
+            {identityError && (
+              <p className="text-sm font-medium text-pass" role="alert">
+                {identityError}
+              </p>
+            )}
+            <Button type="submit" size="lg" className="mt-2 w-full rounded-full" disabled={identitySaving}>
+              {identitySaving ? "Saving…" : "Continue to setup →"}
+            </Button>
+          </form>
         </div>
       </div>
     );

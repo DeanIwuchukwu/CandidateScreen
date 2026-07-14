@@ -1,5 +1,6 @@
 export type CandidatePhase =
   | "intro"
+  | "identity"
   | "setup"
   | "prep"
   | "recording"
@@ -12,6 +13,8 @@ export type InvitePayload = {
   inviteId: string;
   responseId: string | null;
   candidateName: string | null;
+  /** True when this session still needs name + email (e.g. share-link fork). */
+  needsIdentity: boolean;
   interview: {
     id: string;
     title: string;

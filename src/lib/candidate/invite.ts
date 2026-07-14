@@ -7,6 +7,11 @@ import {
 import { isDevBypass } from "@/lib/dev/bypass";
 import { mockInvitePayload } from "@/lib/dev/mock-data";
 
+/** Personal sessions without an email (typically share-link forks) need About you. */
+export function inviteNeedsIdentity(email: string | null | undefined) {
+  return !email?.trim();
+}
+
 export async function getInvitePayload(token: string): Promise<InvitePayload> {
   if (isDevBypass()) {
     const payload = mockInvitePayload(token);
@@ -64,6 +69,7 @@ export async function getInvitePayload(token: string): Promise<InvitePayload> {
     inviteId: invite.id,
     responseId: response?.id ?? null,
     candidateName: invite.candidateName,
+    needsIdentity: !isShareTemplate && inviteNeedsIdentity(invite.email),
     interview: {
       id: invite.interview.id,
       title: invite.interview.title,
@@ -127,6 +133,7 @@ function emptyPayload(
     inviteId: invite?.id ?? "",
     responseId: invite?.response?.id ?? null,
     candidateName: invite?.candidateName ?? null,
+    needsIdentity: false,
     interview: {
       id: invite?.interview.id ?? "",
       title: invite?.interview.title ?? "Interview",

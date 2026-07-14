@@ -277,6 +277,7 @@ export async function sendInterviewInvitesAction(input: {
       message: body,
       inviteUrl,
       senderName: user.name,
+      workspaceName: workspace.name,
     });
 
     sent++;

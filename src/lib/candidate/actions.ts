@@ -8,7 +8,7 @@ import {
   videoFileName,
   videoObjectKey,
 } from "@/lib/storage";
-import { ensureCandidateResponse } from "@/lib/candidate/invite";
+import { ensureCandidateResponse, inviteNeedsIdentity } from "@/lib/candidate/invite";
 import { mockTranscript, type CandidatePhase } from "@/lib/types";
 import {
   isInternalInviteEmail,
@@ -50,7 +50,7 @@ async function forkShareInviteSession(templateInvite: {
   const response = await ensureCandidateResponse(forked.id);
   await prisma.candidateResponse.update({
     where: { id: response.id },
-    data: { progressPhase: "setup", currentQuestionIndex: 0 },
+    data: { progressPhase: "identity", currentQuestionIndex: 0 },
   });
 
   return forked.token;
@@ -157,10 +157,68 @@ export async function saveCandidateProgress(
     return { error: "Use Get started to begin your own session" };
   }
 
+  // Share-link sessions must finish About you before leaving this phase
+  if (
+    inviteNeedsIdentity(invite.email) &&
+    phase !== "identity" &&
+    phase !== "intro" &&
+    phase !== "done"
+  ) {
+    await prisma.candidateResponse.update({
+      where: { id: invite.response.id },
+      data: { progressPhase: "identity", currentQuestionIndex: 0 },
+    });
+    return { ok: true };
+  }
+
   await prisma.candidateResponse.update({
     where: { id: invite.response.id },
     data: { progressPhase: phase, currentQuestionIndex },
   });
+  return { ok: true };
+}
+
+export async function saveCandidateIdentity(
+  token: string,
+  input: { name: string; email: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (isDevBypass()) return { ok: true };
+
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+  if (name.length < 2) return { ok: false, error: "Enter your full name." };
+  if (!email.includes("@") || email.length < 5) {
+    return { ok: false, error: "Enter a valid email address." };
+  }
+  if (isInternalInviteEmail(email)) {
+    return { ok: false, error: "Enter a valid email address." };
+  }
+
+  const invite = await prisma.invite.findUnique({
+    where: { token },
+    include: { response: true },
+  });
+  if (!invite?.response) return { ok: false, error: "Session not found" };
+  if (isShareInviteEmail(invite.email)) {
+    return { ok: false, error: "Use Get started to begin your own session" };
+  }
+  if (!inviteNeedsIdentity(invite.email)) {
+    await prisma.candidateResponse.update({
+      where: { id: invite.response.id },
+      data: { progressPhase: "setup", currentQuestionIndex: 0 },
+    });
+    return { ok: true };
+  }
+
+  await prisma.invite.update({
+    where: { id: invite.id },
+    data: { candidateName: name, email },
+  });
+  await prisma.candidateResponse.update({
+    where: { id: invite.response.id },
+    data: { progressPhase: "setup", currentQuestionIndex: 0 },
+  });
+
   return { ok: true };
 }
 
@@ -275,11 +333,18 @@ export async function submitCandidateInterview(token: string) {
     to &&
     !isInternalInviteEmail(to)
   ) {
+    const questionCount = invite.interview.questions.length;
+    const submittedDate = new Date().toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
     void sendInterviewSubmittedEmail({
       to,
       candidateName: invite.candidateName,
       jobTitle: invite.interview.title,
       workspaceName: invite.interview.workspace.name,
+      answeredLabel: `${questionCount}/${questionCount}`,
+      submittedDate,
     }).catch((err) => console.error("[email] submission confirmation failed", err));
   }
 

@@ -765,6 +765,7 @@ export function mockInvitePayload(token: string): InvitePayload {
     inviteId: "demo-invite",
     responseId: null,
     candidateName: "Jordan Reyes",
+    needsIdentity: false,
     interview: {
       id: "demo-interview",
       title: "Product Designer",

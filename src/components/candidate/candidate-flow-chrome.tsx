@@ -7,6 +7,7 @@ const STEPS = ["Setup", "Prepare", "Record", "Submit"] as const;
 function stepIndex(phase: CandidatePhase): number {
   switch (phase) {
     case "intro":
+    case "identity":
       return -1;
     case "setup":
       return 0;

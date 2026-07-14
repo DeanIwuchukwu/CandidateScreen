@@ -422,6 +422,7 @@ export async function inviteCandidatesBulkToInterviewAction(
         message,
         inviteUrl: invitePublicUrl(invite.token, appUrl()),
         senderName: user.name,
+        workspaceName: workspace.name,
       });
 
       sent++;

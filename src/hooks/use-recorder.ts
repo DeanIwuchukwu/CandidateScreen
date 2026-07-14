@@ -105,6 +105,7 @@ export function useMediaRecorder(stream: MediaStream | null) {
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const stopResolver = useRef<((blob: Blob | null) => void) | null>(null);
+  const generation = useRef(0);
   const [recording, setRecording] = useState(false);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -118,14 +119,17 @@ export function useMediaRecorder(stream: MediaStream | null) {
     const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
       ? "video/webm;codecs=vp9,opus"
       : "video/webm";
+    const myGen = ++generation.current;
     const mr = new MediaRecorder(stream, { mimeType: mime });
     mr.ondataavailable = (e) => {
+      if (myGen !== generation.current) return;
       if (e.data.size > 0) chunks.current.push(e.data);
     };
     mr.onstop = () => {
+      if (myGen !== generation.current) return;
       const nextBlob =
         chunks.current.length > 0
-          ? new Blob(chunks.current, { type: mime.includes("webm") ? "video/webm" : mime })
+          ? new Blob(chunks.current, { type: "video/webm" })
           : null;
       setBlob(nextBlob);
       setRecording(false);
@@ -156,13 +160,42 @@ export function useMediaRecorder(stream: MediaStream | null) {
     });
   }, []);
 
+  /** Stop the current take without using it, then start a fresh recording. */
+  const restart = useCallback(() => {
+    generation.current += 1;
+    const mr = recorder.current;
+    if (mr && mr.state !== "inactive") {
+      try {
+        mr.ondataavailable = () => {};
+        mr.onstop = () => {};
+        mr.stop();
+      } catch {
+        /* ignore */
+      }
+    }
+    stopResolver.current?.(null);
+    stopResolver.current = null;
+    window.clearInterval(timer.current);
+    recorder.current = null;
+    chunks.current = [];
+    setBlob(null);
+    setElapsed(0);
+    setRecording(false);
+
+    // Defer so the previous recorder fully releases before opening a new one
+    window.setTimeout(() => {
+      if (!stream) return;
+      start();
+    }, 50);
+  }, [stream, start]);
+
   const reset = useCallback(() => {
     setBlob(null);
     setElapsed(0);
     chunks.current = [];
   }, []);
 
-  return { recording, blob, elapsed, start, stop, reset };
+  return { recording, blob, elapsed, start, stop, reset, restart };
 }
 
 export function useCountdown(seconds: number, active: boolean, onComplete: () => void) {

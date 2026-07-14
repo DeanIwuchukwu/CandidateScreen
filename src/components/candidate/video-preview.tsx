@@ -45,13 +45,20 @@ export function VideoPreview({
 export function RecordedPlayback({
   blob,
   className,
+  onDecodeError,
+  emptyMessage,
 }: {
   blob: Blob | null;
   className?: string;
+  onDecodeError?: () => void;
+  /** Shown instead of “Processing…” when there is no blob (e.g. failed take). */
+  emptyMessage?: string;
 }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    setFailed(false);
     if (!blob || blob.size === 0) {
       setUrl(null);
       return;
@@ -63,28 +70,30 @@ export function RecordedPlayback({
     };
   }, [blob]);
 
-  if (!blob) {
+  if (!blob || blob.size === 0) {
     return (
       <div
         className={cn(
-          "grid place-items-center bg-black text-sm font-medium text-white/70",
+          "grid place-items-center bg-black px-4 text-center text-sm font-medium text-white/70",
           className,
         )}
       >
-        Processing recording…
+        {emptyMessage ?? "Processing recording…"}
       </div>
     );
   }
 
-  if (!url) {
+  if (failed || !url) {
     return (
       <div
         className={cn(
-          "grid place-items-center bg-black text-sm font-medium text-white/70",
+          "grid place-items-center bg-black px-4 text-center text-sm font-medium text-white/80",
           className,
         )}
       >
-        Loading playback…
+        {failed
+          ? "This take couldn’t be played. Please re-record."
+          : "Loading playback…"}
       </div>
     );
   }
@@ -97,6 +106,10 @@ export function RecordedPlayback({
       playsInline
       preload="auto"
       className={cn("object-cover", className)}
+      onError={() => {
+        setFailed(true);
+        onDecodeError?.();
+      }}
     />
   );
 }

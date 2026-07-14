@@ -45,6 +45,7 @@ function CandidateFlowInner({ data }: Props) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [localBlob, setLocalBlob] = useState<Blob | null>(null);
+  const [takeFailed, setTakeFailed] = useState(false);
 
   const question = data.questions[qIndex];
   const retakesLeft = question
@@ -55,7 +56,10 @@ function CandidateFlowInner({ data }: Props) {
   const needsStream = phase === "setup" || phase === "prep" || phase === "recording";
   const { stream, error: permError } = useMediaStream(cameraId, micId, needsStream);
   const levels = useAudioLevel(stream);
-  const { blob, elapsed, recording, start, stop, reset } = useMediaRecorder(stream);
+  const { blob, elapsed, recording, start, stop, reset, restart } = useMediaRecorder(stream);
+
+  /** Below this, WebM is almost certainly empty/corrupt (e.g. after a bad Restart). */
+  const MIN_TAKE_BYTES = 1500;
 
   const persist = useCallback(
     async (nextPhase: CandidatePhase, nextIndex: number) => {
@@ -85,7 +89,13 @@ function CandidateFlowInner({ data }: Props) {
     finishingRef.current = true;
     try {
       const recorded = await stop();
-      if (recorded) setLocalBlob(recorded);
+      if (recorded && recorded.size >= MIN_TAKE_BYTES) {
+        setTakeFailed(false);
+        setLocalBlob(recorded);
+      } else {
+        setTakeFailed(true);
+        setLocalBlob(null);
+      }
       await persist("review", qIndex);
     } finally {
       finishingRef.current = false;
@@ -210,13 +220,15 @@ function CandidateFlowInner({ data }: Props) {
     setRetakesUsed((r) => ({ ...r, [question.id]: (r[question.id] ?? 0) + 1 }));
     reset();
     setLocalBlob(null);
+    setTakeFailed(false);
     if (question.thinkTimeSec > 0) await persist("prep", qIndex);
     else await persist("recording", qIndex);
   };
 
   const handleRestartRecording = () => {
-    reset();
-    start();
+    setTakeFailed(false);
+    setLocalBlob(null);
+    restart();
   };
 
   if (phase === "intro") {
@@ -527,6 +539,7 @@ function CandidateFlowInner({ data }: Props) {
 
   if (phase === "review" && question) {
     const playback = blob ?? localBlob;
+    const canUse = Boolean(playback && playback.size >= MIN_TAKE_BYTES && !takeFailed);
     const leftAfter = data.questions.length - qIndex - 1;
     return (
       <div className="min-h-screen bg-paper">
@@ -537,12 +550,26 @@ function CandidateFlowInner({ data }: Props) {
           backLabel="Overview"
         />
         <div className="mx-auto grid max-w-5xl gap-8 px-4 py-8 md:grid-cols-2 md:px-8 md:py-10">
-          <RecordedPlayback blob={playback} className="aspect-video w-full rounded-[14px] bg-black" />
+          <RecordedPlayback
+            blob={canUse ? playback : null}
+            className="aspect-video w-full rounded-[14px] bg-black"
+            emptyMessage={
+              takeFailed
+                ? "This take couldn’t be played. Please re-record."
+                : undefined
+            }
+            onDecodeError={() => setTakeFailed(true)}
+          />
           <div className="rounded-[14px] bg-[#FAF7F0] p-6 md:p-8">
             <h2 className="font-display text-2xl font-medium">Happy with this take?</h2>
             <p className="mt-2 text-sm text-muted">
               Question {qIndex + 1} of {data.questions.length}: {question.text}
             </p>
+            {takeFailed && (
+              <p className="mt-3 text-sm font-medium text-pass" role="alert">
+                That take didn&apos;t save correctly (often after Restart). Please re-record.
+              </p>
+            )}
             <div className="mt-6 rounded-[12px] border border-hairline bg-white p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-faint-2">
                 A couple of tips
@@ -558,7 +585,7 @@ function CandidateFlowInner({ data }: Props) {
             <Button
               className="mt-6 w-full"
               onClick={handleUseAnswer}
-              disabled={!playback || playback.size === 0 || uploading}
+              disabled={!canUse || uploading}
             >
               {uploading ? "Uploading…" : "Use this answer →"}
             </Button>

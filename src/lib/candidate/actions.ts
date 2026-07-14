@@ -11,11 +11,13 @@ import {
 import { ensureCandidateResponse } from "@/lib/candidate/invite";
 import { mockTranscript, type CandidatePhase } from "@/lib/types";
 import {
+  isInternalInviteEmail,
   isPreviewInviteEmail,
   isShareInviteEmail,
 } from "@/lib/candidate/internal-invites";
 import { isDevBypass } from "@/lib/dev/bypass";
 import { createToken } from "@/lib/auth/crypto";
+import { sendInterviewSubmittedEmail } from "@/lib/email";
 
 async function isPreviewToken(token: string) {
   const invite = await prisma.invite.findUnique({
@@ -233,7 +235,10 @@ export async function submitCandidateInterview(token: string) {
   if (await isPreviewToken(token)) return { ok: true };
   const invite = await prisma.invite.findUnique({
     where: { token },
-    include: { response: true, interview: { include: { questions: true } } },
+    include: {
+      response: true,
+      interview: { include: { questions: true, workspace: true } },
+    },
   });
   if (!invite?.response) return { error: "Session not found" };
   if (isShareInviteEmail(invite.email)) {
@@ -246,6 +251,8 @@ export async function submitCandidateInterview(token: string) {
   if (answerCount < invite.interview.questions.length) {
     return { error: "Please answer all questions before submitting." };
   }
+
+  const alreadySubmitted = Boolean(invite.response.submittedAt);
 
   await prisma.candidateResponse.update({
     where: { id: invite.response.id },
@@ -261,6 +268,20 @@ export async function submitCandidateInterview(token: string) {
 
   const { markApplicationInterviewedByInvite } = await import("@/lib/jobs/applications");
   await markApplicationInterviewedByInvite(invite.id);
+
+  const to = invite.email?.trim();
+  if (
+    !alreadySubmitted &&
+    to &&
+    !isInternalInviteEmail(to)
+  ) {
+    void sendInterviewSubmittedEmail({
+      to,
+      candidateName: invite.candidateName,
+      jobTitle: invite.interview.title,
+      workspaceName: invite.interview.workspace.name,
+    }).catch((err) => console.error("[email] submission confirmation failed", err));
+  }
 
   return { ok: true };
 }

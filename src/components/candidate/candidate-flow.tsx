@@ -655,20 +655,17 @@ function DoneScreen({ data, questionCount }: { data: InvitePayload; questionCoun
           </p>
           <ol className="mt-4 space-y-3 text-sm text-muted">
             <li>1. The hiring team reviews your responses</li>
-            <li>2. You&apos;ll hear back within 1–3 business days</li>
+            <li>2. You&apos;ll get a confirmation email</li>
             <li>3. Check your email for updates from {data.interview.workspaceName}</li>
           </ol>
         </div>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          {data.interview.careersUrl && (
+        {data.interview.careersUrl && (
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link href={data.interview.careersUrl}>
               <Button variant="secondary">Back to {data.interview.workspaceName} careers</Button>
             </Link>
-          )}
-          <button type="button" className="text-sm font-semibold text-primary hover:underline">
-            Email me a copy ›
-          </button>
-        </div>
+          </div>
+        )}
         <p className="mt-8 text-xs text-faint">
           Your recordings are stored securely and shared only with the hiring team.
         </p>

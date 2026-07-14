@@ -155,6 +155,37 @@ export async function sendInterviewInviteEmail(payload: InviteEmailPayload) {
   return sendEmail({ to: payload.to, subject, html, text });
 }
 
+export async function sendInterviewSubmittedEmail(input: {
+  to: string;
+  candidateName: string | null;
+  jobTitle: string;
+  workspaceName: string;
+}) {
+  const firstName = input.candidateName
+    ? firstNameFromFullName(input.candidateName)
+    : null;
+  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+  const subject = `We received your interview — ${input.jobTitle}`;
+  const text = `${greeting}
+
+Thanks for completing your video interview for ${input.jobTitle} at ${input.workspaceName}.
+
+We've received your responses. The hiring team will review them and reach out if there's a next step.
+
+You don't need to do anything else for now.
+
+— ${PRODUCT_NAME}`;
+
+  const html = emailLayout(`
+    <p>${greeting}</p>
+    <p>Thanks for completing your video interview for <strong>${input.jobTitle}</strong> at <strong>${input.workspaceName}</strong>.</p>
+    <p>We've received your responses. The hiring team will review them and reach out if there's a next step.</p>
+    <p style="color: #4a5c52;">You don't need to do anything else for now.</p>
+  `);
+
+  return sendEmail({ to: input.to, subject, html, text });
+}
+
 export function mergeInviteMessage(template: string, firstName: string) {
   return template.replace(/\[First name\]/g, firstName);
 }

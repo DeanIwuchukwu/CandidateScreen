@@ -747,7 +747,7 @@ function AlreadySubmittedScreen({ data }: Props) {
           Thanks{data.candidateName ? `, ${data.candidateName.split(" ")[0]}` : ""} — your responses
           were submitted successfully.
         </p>
-        <div className="mt-6 grid grid-cols-3 gap-3 rounded-[14px] border border-hairline bg-surface p-4 text-sm">
+        <div className="mt-6 grid grid-cols-2 gap-3 rounded-[14px] border border-hairline bg-surface p-4 text-sm">
           <div>
             <div className="font-display text-xl">{qCount}/{qCount}</div>
             <div className="text-xs text-faint">answered</div>
@@ -756,14 +756,9 @@ function AlreadySubmittedScreen({ data }: Props) {
             <div className="font-display text-xl">—</div>
             <div className="text-xs text-faint">Submitted</div>
           </div>
-          <div>
-            <div className="font-display text-xl">1–3 days</div>
-            <div className="text-xs text-faint">Response time</div>
-          </div>
         </div>
-        <Button variant="secondary" className="mt-8">View confirmation</Button>
         {data.interview.careersUrl && (
-          <Link href={data.interview.careersUrl} className="mt-4 inline-block text-sm font-semibold text-primary">
+          <Link href={data.interview.careersUrl} className="mt-8 inline-block text-sm font-semibold text-primary">
             Back to careers
           </Link>
         )}

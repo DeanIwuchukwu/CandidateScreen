@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Check, Clock } from "lucide-react";
 import type { InvitePayload, CandidatePhase } from "@/lib/types";
@@ -78,13 +78,27 @@ function CandidateFlowInner({ data }: Props) {
   const timeLimit = question?.timeLimitSec ?? 120;
   const remaining = Math.max(0, timeLimit - elapsed);
 
+  const finishingRef = useRef(false);
+
+  const finishRecording = useCallback(async () => {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+    try {
+      const recorded = await stop();
+      if (recorded) setLocalBlob(recorded);
+      await persist("review", qIndex);
+    } finally {
+      finishingRef.current = false;
+    }
+  }, [stop, persist, qIndex]);
+
+  useEffect(() => {
+    if (phase !== "recording" || !recording || remaining > 0) return;
+    void finishRecording();
+  }, [phase, recording, remaining, finishRecording]);
+
   if (permError === "denied" && phase !== "intro") {
     return <CameraBlockedScreen onRetry={() => refresh()} />;
-  }
-
-  if (phase === "recording" && recording && remaining === 0) {
-    stop();
-    persist("review", qIndex);
   }
 
   const handleStartSession = async () => {
@@ -107,12 +121,12 @@ function CandidateFlowInner({ data }: Props) {
 
   const handleStartRecording = () => {
     reset();
+    setLocalBlob(null);
     start();
   };
 
   const handleStopRecording = () => {
-    stop();
-    setTimeout(() => persist("review", qIndex), 100);
+    void finishRecording();
   };
 
   const handleUseAnswer = async () => {
@@ -541,7 +555,11 @@ function CandidateFlowInner({ data }: Props) {
             <p className="mt-4 text-[13px] font-semibold text-faint">
               Question {qIndex + 1} of {data.questions.length} · {leftAfter} left after this
             </p>
-            <Button className="mt-6 w-full" onClick={handleUseAnswer} disabled={!playback || uploading}>
+            <Button
+              className="mt-6 w-full"
+              onClick={handleUseAnswer}
+              disabled={!playback || playback.size === 0 || uploading}
+            >
               {uploading ? "Uploading…" : "Use this answer →"}
             </Button>
             {uploadError && (

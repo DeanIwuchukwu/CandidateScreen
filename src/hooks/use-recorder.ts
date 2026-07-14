@@ -104,6 +104,7 @@ export function useAudioLevel(stream: MediaStream | null) {
 export function useMediaRecorder(stream: MediaStream | null) {
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
+  const stopResolver = useRef<((blob: Blob | null) => void) | null>(null);
   const [recording, setRecording] = useState(false);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -122,9 +123,15 @@ export function useMediaRecorder(stream: MediaStream | null) {
       if (e.data.size > 0) chunks.current.push(e.data);
     };
     mr.onstop = () => {
-      setBlob(new Blob(chunks.current, { type: "video/webm" }));
+      const nextBlob =
+        chunks.current.length > 0
+          ? new Blob(chunks.current, { type: mime.includes("webm") ? "video/webm" : mime })
+          : null;
+      setBlob(nextBlob);
       setRecording(false);
       window.clearInterval(timer.current);
+      stopResolver.current?.(nextBlob);
+      stopResolver.current = null;
     };
     mr.start(250);
     recorder.current = mr;
@@ -133,7 +140,20 @@ export function useMediaRecorder(stream: MediaStream | null) {
   }, [stream]);
 
   const stop = useCallback(() => {
-    recorder.current?.stop();
+    return new Promise<Blob | null>((resolve) => {
+      const mr = recorder.current;
+      if (!mr || mr.state === "inactive") {
+        resolve(null);
+        return;
+      }
+      stopResolver.current = resolve;
+      try {
+        if (mr.state === "recording") mr.requestData();
+      } catch {
+        /* some browsers throw if requestData is unavailable mid-stop */
+      }
+      mr.stop();
+    });
   }, []);
 
   const reset = useCallback(() => {

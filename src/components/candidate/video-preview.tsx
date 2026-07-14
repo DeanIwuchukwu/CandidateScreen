@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function VideoPreview({
@@ -49,16 +49,54 @@ export function RecordedPlayback({
   blob: Blob | null;
   className?: string;
 }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  const url = blob ? URL.createObjectURL(blob) : null;
+  const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!blob || blob.size === 0) {
+      setUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(blob);
+    setUrl(objectUrl);
     return () => {
-      if (url) URL.revokeObjectURL(url);
+      URL.revokeObjectURL(objectUrl);
     };
-  }, [url]);
+  }, [blob]);
 
-  if (!url) return null;
+  if (!blob) {
+    return (
+      <div
+        className={cn(
+          "grid place-items-center bg-black text-sm font-medium text-white/70",
+          className,
+        )}
+      >
+        Processing recording…
+      </div>
+    );
+  }
 
-  return <video ref={ref} src={url} controls className={cn("object-cover", className)} />;
+  if (!url) {
+    return (
+      <div
+        className={cn(
+          "grid place-items-center bg-black text-sm font-medium text-white/70",
+          className,
+        )}
+      >
+        Loading playback…
+      </div>
+    );
+  }
+
+  return (
+    <video
+      key={url}
+      src={url}
+      controls
+      playsInline
+      preload="auto"
+      className={cn("object-cover", className)}
+    />
+  );
 }

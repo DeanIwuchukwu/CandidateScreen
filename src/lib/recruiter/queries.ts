@@ -399,15 +399,22 @@ export async function getCandidateStageCounts(
 
 export async function getCandidates(
   workspaceId: string,
-  opts: { stage?: CandidateStage; interviewId?: string } = {},
+  opts: { stage?: CandidateStage; interviewId?: string; search?: string } = {},
 ) {
-  if (isDevBypass()) return mockCandidates(opts.stage, opts.interviewId);
+  if (isDevBypass()) return mockCandidates(opts.stage, opts.interviewId, opts.search);
+
+  const search = opts.search?.trim();
 
   return prisma.candidateResponse.findMany({
     where: {
       ...(opts.stage ? { stage: opts.stage } : {}),
       invite: {
         ...realCandidateInviteFilter,
+        ...(search
+          ? {
+              candidateName: { contains: search, mode: "insensitive" as const },
+            }
+          : {}),
         interview: {
           workspaceId,
           ...(opts.interviewId ? { id: opts.interviewId } : {}),
@@ -425,13 +432,19 @@ export async function getCandidates(
 
 export async function getCandidatesPaginated(
   workspaceId: string,
-  opts: { stage?: CandidateStage; interviewId?: string; page?: number } = {},
+  opts: {
+    stage?: CandidateStage;
+    interviewId?: string;
+    page?: number;
+    search?: string;
+  } = {},
 ) {
   const page = parsePage(opts.page);
+  const search = opts.search?.trim();
 
   if (isDevBypass()) {
     return paginateArray(
-      mockCandidates(opts.stage, opts.interviewId),
+      mockCandidates(opts.stage, opts.interviewId, search),
       page,
       TABLE_PAGE_SIZE,
     );
@@ -441,6 +454,11 @@ export async function getCandidatesPaginated(
     ...(opts.stage ? { stage: opts.stage } : {}),
     invite: {
       ...realCandidateInviteFilter,
+      ...(search
+        ? {
+            candidateName: { contains: search, mode: "insensitive" as const },
+          }
+        : {}),
       interview: {
         workspaceId,
         ...(opts.interviewId ? { id: opts.interviewId } : {}),

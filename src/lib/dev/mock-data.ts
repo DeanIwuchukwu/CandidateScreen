@@ -410,7 +410,7 @@ export function mockInterviewsList(status?: string) {
   return all.filter((i) => i.status === status);
 }
 
-export function mockCandidates(stage?: string, interviewId?: string) {
+export function mockCandidates(stage?: string, interviewId?: string, search?: string) {
   const feInterview = {
     ...MOCK_INTERVIEW,
     id: "demo-fe",
@@ -667,6 +667,12 @@ export function mockCandidates(stage?: string, interviewId?: string) {
   }
   if (stage && stage !== "ALL") {
     filtered = filtered.filter((r) => r.stage === stage);
+  }
+  const q = search?.trim().toLowerCase();
+  if (q) {
+    filtered = filtered.filter((r) =>
+      (r.invite.candidateName ?? "").toLowerCase().includes(q),
+    );
   }
   return filtered;
 }

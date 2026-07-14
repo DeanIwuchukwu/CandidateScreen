@@ -8,19 +8,33 @@ import { pageRange, type PaginatedResult } from "@/lib/recruiter/pagination";
 export function SearchField({
   placeholder,
   className,
+  name,
+  defaultValue,
 }: {
   placeholder: string;
   className?: string;
+  name?: string;
+  defaultValue?: string;
 }) {
   return (
     <div
       className={cn(
-        "flex max-w-[280px] flex-1 items-center gap-2 rounded-[9px] border border-[#E4DDCD] px-3 py-2 text-faint-2",
+        "flex max-w-[280px] flex-1 items-center gap-2 rounded-[9px] border border-[#E4DDCD] bg-white px-3 py-2",
         className,
       )}
     >
-      <Search size={15} strokeWidth={1.8} />
-      <span className="text-[13px] font-medium">{placeholder}</span>
+      <Search size={15} strokeWidth={1.8} className="shrink-0 text-faint-2" />
+      {name ? (
+        <input
+          type="search"
+          name={name}
+          defaultValue={defaultValue}
+          placeholder={placeholder}
+          className="min-w-0 flex-1 bg-transparent text-[13px] font-medium text-ink outline-none placeholder:text-faint-2"
+        />
+      ) : (
+        <span className="text-[13px] font-medium text-faint-2">{placeholder}</span>
+      )}
     </div>
   );
 }

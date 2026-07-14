@@ -17,7 +17,6 @@ import {
   AvatarCircle,
   Breadcrumb,
   CountTabs,
-  FilterButton,
   SearchField,
   SortLabel,
   StatusPill,
@@ -46,10 +45,15 @@ type CandidateRow = Awaited<
   reviewed?: boolean;
 };
 
-function candidatesUrl(opts: { interviewId?: string; stage?: string }) {
+function candidatesUrl(opts: {
+  interviewId?: string;
+  stage?: string;
+  search?: string;
+}) {
   const params = new URLSearchParams();
   if (opts.interviewId) params.set("interview", opts.interviewId);
   if (opts.stage) params.set("stage", opts.stage);
+  if (opts.search?.trim()) params.set("q", opts.search.trim());
   const q = params.toString();
   return q ? `/app/candidates?${q}` : "/app/candidates";
 }
@@ -93,13 +97,23 @@ function rowPresentation(c: CandidateRow) {
 export default async function CandidatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ interview?: string; stage?: string; page?: string }>;
+  searchParams: Promise<{
+    interview?: string;
+    stage?: string;
+    page?: string;
+    q?: string;
+  }>;
 }) {
   const user = await requireSessionUser();
   const { workspace } = await getUserWorkspace(user.id);
-  const { interview: interviewId, stage: stageParam, page: pageParam } =
-    await searchParams;
+  const {
+    interview: interviewId,
+    stage: stageParam,
+    page: pageParam,
+    q: searchQuery,
+  } = await searchParams;
   const page = parsePage(pageParam);
+  const search = searchQuery?.trim() || undefined;
   const scoped = Boolean(interviewId);
   const stage = stageParam ?? (scoped ? "TO_REVIEW" : "ALL");
 
@@ -113,6 +127,7 @@ export default async function CandidatesPage({
       interviewId,
       stage: stage === "ALL" ? undefined : (stage as CandidateStage),
       page,
+      search,
     }),
     getCandidateStageCounts(workspace.id, interviewId),
     interviewId
@@ -221,7 +236,7 @@ export default async function CandidatesPage({
         <CountTabs
           tabs={stages.map((s) => ({
             label: s.label,
-            href: candidatesUrl({ interviewId, stage: s.key }),
+            href: candidatesUrl({ interviewId, stage: s.key, search }),
             count: counts[s.key],
             active: stage === s.key,
           }))}
@@ -230,9 +245,18 @@ export default async function CandidatesPage({
 
       <div className="px-8 pb-7 pt-[18px]">
         <div className="mb-3.5 flex items-center gap-2.5">
-          <SearchField placeholder="Search name" />
-          {!scoped && <FilterButton>All roles ▾</FilterButton>}
-          <FilterButton>Score ▾</FilterButton>
+          <form className="flex max-w-[280px] flex-1" action="/app/candidates" method="get">
+            {interviewId ? (
+              <input type="hidden" name="interview" value={interviewId} />
+            ) : null}
+            {stage ? <input type="hidden" name="stage" value={stage} /> : null}
+            <SearchField
+              name="q"
+              defaultValue={search ?? ""}
+              placeholder="Search name"
+              className="max-w-none w-full"
+            />
+          </form>
           <SortLabel>Sorted by · Most recent</SortLabel>
         </div>
 
@@ -254,11 +278,13 @@ export default async function CandidatesPage({
               const { statusLabel, avatar, isReviewed, inProgress, pillTone } =
                 rowPresentation(c);
               const answered = c.answers.length;
+              const reviewHref = `/app/candidates/${c.id}/review`;
 
               return (
-                <div
+                <Link
                   key={c.id}
-                  className={`grid items-center gap-4 border-b border-hairline-2 px-[22px] py-3.5 last:border-0 ${isReviewed ? "bg-[#FCFAF5]" : ""}`}
+                  href={reviewHref}
+                  className={`grid items-center gap-4 border-b border-hairline-2 px-[22px] py-3.5 last:border-0 hover:bg-reviewed ${isReviewed ? "bg-[#FCFAF5]" : ""}`}
                   style={{ gridTemplateColumns: grid }}
                 >
                   <div className="flex items-center gap-3">
@@ -295,28 +321,15 @@ export default async function CandidatesPage({
                     {c.submittedAt ? formatRelativeTime(c.submittedAt) : "—"}
                   </span>
                   <div className="text-right">
-                    {inProgress ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled
-                        className="text-faint-2"
-                      >
-                        Pending
-                      </Button>
-                    ) : isReviewed ? (
-                      <Link href={`/app/candidates/${c.id}/review`}>
-                        <Button variant="secondary" size="sm">
-                          Open
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Link href={`/app/candidates/${c.id}/review`}>
-                        <Button size="sm">Review</Button>
-                      </Link>
-                    )}
+                    <Button
+                      variant={isReviewed ? "secondary" : "primary"}
+                      size="sm"
+                      tabIndex={-1}
+                    >
+                      {isReviewed ? "Open" : inProgress ? "Open" : "Review"}
+                    </Button>
                   </div>
-                </div>
+                </Link>
               );
             })
           )}
@@ -326,6 +339,7 @@ export default async function CandidatesPage({
             query={{
               ...(interviewId ? { interview: interviewId } : {}),
               stage,
+              ...(search ? { q: search } : {}),
             }}
           />
         </div>

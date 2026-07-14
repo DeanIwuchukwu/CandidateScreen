@@ -1,10 +1,8 @@
 import { requireSessionUser } from "@/lib/auth/session";
 import { getUserWorkspace } from "@/lib/recruiter/queries";
 import { updateWorkspaceAction } from "@/lib/recruiter/actions";
-import { getTeamRoster } from "@/lib/team/queries";
 import { isAdmin } from "@/lib/team/permissions";
 import { Button } from "@/components/ui/button";
-import { TeamSection } from "@/components/recruiter/team-section";
 import {
   SettingsTabs,
   ToggleSwitch,
@@ -20,7 +18,6 @@ export default async function SettingsPage({
   const user = await requireSessionUser();
   const membership = await getUserWorkspace(user.id);
   const { workspace, role } = membership;
-  const roster = await getTeamRoster(workspace.id, user.id);
   const { error } = await searchParams;
 
   return (
@@ -36,50 +33,69 @@ export default async function SettingsPage({
         </p>
       )}
 
-      <div className="grid items-start gap-6 px-8 py-[26px] lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="flex flex-col gap-[22px]">
-          <form
-            action={updateWorkspaceAction}
-            id="branding"
-            className="scroll-mt-24 rounded-2xl border border-hairline p-6"
-          >
-            <h2 className="mb-[18px] text-[15px] font-semibold">Company profile</h2>
-            <div className="mb-5 flex items-center gap-4">
-              <div className="grid h-[60px] w-[60px] place-items-center rounded-[14px] bg-ink text-2xl font-bold text-white">
-                {workspace.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <Button type="button" variant="secondary" size="sm">
-                  Upload logo
-                </Button>
-                <p className="mt-1.5 text-[11.5px] font-medium text-faint-2">
-                  PNG or SVG, at least 256px
-                </p>
-              </div>
+      <div className="grid items-stretch gap-6 px-8 py-[26px] lg:grid-cols-[1.1fr_0.9fr]">
+        <form
+          action={updateWorkspaceAction}
+          id="branding"
+          className="flex h-full flex-col scroll-mt-24 rounded-2xl border border-hairline p-6"
+        >
+          <h2 className="mb-[18px] text-[15px] font-semibold">Company profile</h2>
+          <div className="mb-5 flex items-center gap-4">
+            <div className="grid h-[60px] w-[60px] place-items-center rounded-[14px] bg-ink text-2xl font-bold text-white">
+              {workspace.name.charAt(0).toUpperCase()}
             </div>
-            <label className="mb-4 block text-[12.5px] font-semibold text-muted">
-              Company name
-              <input
-                name="name"
-                defaultValue={workspace.name}
-                disabled={!isAdmin(role)}
-                className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] px-3 py-2.5 text-sm font-medium disabled:bg-paper-2"
-              />
-            </label>
-            <label className="block text-[12.5px] font-semibold text-muted">
-              Careers page URL
-              <input
-                name="careersUrl"
-                defaultValue={workspace.careersUrl ?? ""}
-                placeholder="https://company.com/careers"
-                disabled={!isAdmin(role)}
-                className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] px-3 py-2.5 text-sm font-medium disabled:bg-paper-2"
-              />
-            </label>
-            <input type="hidden" name="accentColor" value={workspace.accentColor} />
-          </form>
+            <div>
+              <Button type="button" variant="secondary" size="sm">
+                Upload logo
+              </Button>
+              <p className="mt-1.5 text-[11.5px] font-medium text-faint-2">
+                PNG or SVG, at least 256px
+              </p>
+            </div>
+          </div>
+          <label className="mb-4 block text-[12.5px] font-semibold text-muted">
+            Company name
+            <input
+              name="name"
+              defaultValue={workspace.name}
+              disabled={!isAdmin(role)}
+              className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] px-3 py-2.5 text-sm font-medium disabled:bg-paper-2"
+            />
+          </label>
+          <label className="block text-[12.5px] font-semibold text-muted">
+            Careers page URL
+            <input
+              name="careersUrl"
+              defaultValue={workspace.careersUrl ?? ""}
+              placeholder="https://company.com/careers"
+              disabled={!isAdmin(role)}
+              className="mt-1.5 w-full rounded-[10px] border border-[#E4DDCD] px-3 py-2.5 text-sm font-medium disabled:bg-paper-2"
+            />
+          </label>
+          <input type="hidden" name="accentColor" value={workspace.accentColor} />
+        </form>
 
-          <div className="rounded-2xl border border-hairline p-6">
+        <div className="flex h-full flex-col gap-[22px]">
+          <div className="rounded-2xl border border-hairline p-6 scroll-mt-24" id="notifications">
+            <h2 className="mb-4 text-[15px] font-semibold">Notifications</h2>
+            <div className="flex flex-col gap-4">
+              {[
+                ["New response received", "Email me when a candidate submits", true],
+                ["Daily digest", "One summary each morning", true],
+                ["Weekly analytics", "Funnel & score trends", false],
+              ].map(([title, desc, on]) => (
+                <div key={title as string} className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-[13.5px] font-semibold">{title}</div>
+                    <div className="text-xs text-faint">{desc}</div>
+                  </div>
+                  <ToggleSwitch on={on as boolean} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-auto rounded-2xl border border-hairline p-6">
             <h2 className="text-[15px] font-semibold">Brand accent</h2>
             <p className="mt-1.5 text-[13px] text-muted">
               Shown to candidates on the interview pages.
@@ -100,33 +116,6 @@ export default async function SettingsPage({
               ))}
             </div>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-[22px]">
-          <div className="rounded-2xl border border-hairline p-6 scroll-mt-24" id="notifications">
-            <h2 className="mb-4 text-[15px] font-semibold">Notifications</h2>
-            <div className="flex flex-col gap-4">
-              {[
-                ["New response received", "Email me when a candidate submits", true],
-                ["Daily digest", "One summary each morning", true],
-                ["Weekly analytics", "Funnel & score trends", false],
-              ].map(([title, desc, on]) => (
-                <div key={title as string} className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-[13.5px] font-semibold">{title}</div>
-                    <div className="text-xs text-faint">{desc}</div>
-                  </div>
-                  <ToggleSwitch on={on as boolean} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <TeamSection
-            members={roster.members}
-            pendingInvites={roster.pendingInvites}
-            isAdmin={isAdmin(role)}
-          />
         </div>
       </div>
 

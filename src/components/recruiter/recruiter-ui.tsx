@@ -279,7 +279,7 @@ export function FilterButton({ children }: { children: React.ReactNode }) {
 
 const settingsTabs = [
   { label: "Workspace", href: "/app/settings", key: "workspace" },
-  { label: "Team", href: "/app/settings#team", key: "team" },
+  { label: "Team", href: "/app/settings/team", key: "team" },
   { label: "Branding", href: "/app/settings#branding", key: "branding" },
   { label: "Notifications", href: "/app/settings#notifications", key: "notifications" },
   { label: "Billing", href: "/app/settings/billing", key: "billing" },

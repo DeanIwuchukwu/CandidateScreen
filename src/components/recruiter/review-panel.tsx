@@ -27,22 +27,6 @@ type ReviewData = {
   queueIndex: number;
 };
 
-const DEMO_TRANSCRIPT = [
-  {
-    time: "0:02",
-    text: "The project I'm most proud of is a redesign of our onboarding flow. I led design end to end, partnering with two engineers and a PM.",
-  },
-  {
-    time: "0:34",
-    text: "We started by interviewing twelve recent sign-ups, and the insight that changed everything was that people abandoned at the workspace step…",
-    highlight: true,
-  },
-  {
-    time: "1:06",
-    text: "After we shipped it, activation went up nineteen percent in the first month, and support tickets about setup dropped by about a third.",
-  },
-];
-
 function formatDuration(sec: number) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -58,23 +42,24 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-export function ReviewPanel({ data }: { data: ReviewData }) {
-  const [activeQ, setActiveQ] = useState(1);
-  const [overall, setOverall] = useState(data.overallRating ?? 4);
-  const [notes, setNotes] = useState(
-    data.notes ??
-      "Clear storyteller, led with impact. Great example of research → decision. Would want to probe how they handle disagreement in the next round.",
+function firstAnsweredIndex(data: ReviewData) {
+  const idx = data.questions.findIndex((q) =>
+    data.answers.some((a) => a.questionId === q.id && a.videoUrl),
   );
-  const [rubric, setRubric] = useState<Record<string, number>>({
-    Communication: 5,
-    "Craft & rigor": 4,
-    Collaboration: 3,
-    ...data.rubric,
-  });
+  return idx >= 0 ? idx : 0;
+}
+
+export function ReviewPanel({ data }: { data: ReviewData }) {
+  const [activeQ, setActiveQ] = useState(() => firstAnsweredIndex(data));
+  const [overall, setOverall] = useState(data.overallRating ?? 0);
+  const [notes, setNotes] = useState(data.notes ?? "");
+  const [rubric, setRubric] = useState<Record<string, number>>({ ...data.rubric });
   const [, startTransition] = useTransition();
 
   const question = data.questions[activeQ];
   const answer = data.answers.find((a) => a.questionId === question?.id);
+  const hasVideo = Boolean(answer?.videoUrl);
+  const hasTranscript = Boolean(answer?.transcript?.trim());
 
   const queueTotal = data.queueIds.length;
   const canPrev = data.queueIndex > 0;
@@ -83,11 +68,9 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
   const nextId = canNext ? data.queueIds[data.queueIndex + 1] : null;
 
   const copyTranscript = async () => {
-    const text =
-      answer?.transcript ??
-      DEMO_TRANSCRIPT.map((l) => l.text).join("\n");
+    if (!answer?.transcript) return;
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(answer.transcript);
     } catch {
       /* clipboard unavailable */
     }
@@ -96,7 +79,7 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
   const persist = (extra?: Parameters<typeof saveReviewAction>[1]) => {
     startTransition(() =>
       saveReviewAction(data.id, {
-        overallRating: overall,
+        overallRating: overall || undefined,
         notes,
         rubric,
         ...extra,
@@ -169,36 +152,30 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
       <div className="grid flex-1 lg:grid-cols-[1fr_372px]">
         <div className="border-r border-hairline-3 px-7 py-6">
           <div className="relative aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-[#6E7C6F] via-[#4C574E] to-[#333B35]">
-            {answer?.videoUrl ? (
-              <video src={answer.videoUrl} controls className="h-full w-full object-cover" />
+            {hasVideo ? (
+              <video src={answer!.videoUrl!} controls className="h-full w-full object-cover" />
             ) : (
-              <>
-                <div className="absolute inset-0 bg-[radial-gradient(46%_42%_at_36%_20%,rgba(255,244,224,.3),transparent_70%)]" />
-                <div className="absolute bottom-[-8%] left-1/2 h-[60%] w-[52%] -translate-x-1/2 bg-[radial-gradient(72%_92%_at_50%_22%,#2A352E_60%,transparent_80%)]" />
-                <div className="absolute bottom-[34%] left-1/2 aspect-square w-[17%] -translate-x-1/2 rounded-full bg-[radial-gradient(64%_64%_at_42%_34%,#37433A_55%,transparent_78%)]" />
-                <div className="absolute inset-0 bg-[rgba(8,12,9,.22)]" />
-                <div className="absolute left-1/2 top-1/2 grid h-[62px] w-[62px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/92 shadow-lg">
-                  <span className="ml-1 h-0 w-0 border-b-[10px] border-l-[17px] border-t-[10px] border-b-transparent border-l-ink border-t-transparent" />
+              <div className="absolute inset-0 grid place-items-center px-6 text-center">
+                <div>
+                  <p className="text-sm font-semibold text-white/90">
+                    No recording for this question
+                  </p>
+                  <p className="mt-1.5 text-[13px] text-white/60">
+                    {data.answers.length === 0
+                      ? "This candidate hasn’t uploaded any answers yet."
+                      : "They may still be in progress, or skipped this question."}
+                  </p>
                 </div>
-                <div className="absolute left-4 top-3.5 rounded-[7px] bg-black/35 px-2.5 py-1 text-[11px] font-semibold text-white">
-                  Question {activeQ + 1} of {data.questions.length}
-                </div>
-                <div className="absolute bottom-3 left-4 right-4 flex items-center gap-2.5">
-                  <span className="text-[11px] font-semibold tabular-nums text-white">0:38</span>
-                  <div className="h-1 flex-1 overflow-hidden rounded bg-white/30">
-                    <div className="relative h-full w-[40%] rounded bg-white">
-                      <span className="absolute -right-1 top-1/2 h-[11px] w-[11px] -translate-y-1/2 rounded-full bg-white" />
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-semibold tabular-nums text-white/60">
-                    {answer?.durationSec ? formatDuration(answer.durationSec) : "1:34"}
-                  </span>
-                  <span className="rounded-md bg-black/35 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-                    1.0×
-                  </span>
-                </div>
-              </>
+              </div>
             )}
+            <div className="absolute left-4 top-3.5 rounded-[7px] bg-black/35 px-2.5 py-1 text-[11px] font-semibold text-white">
+              Question {activeQ + 1} of {data.questions.length}
+            </div>
+            {hasVideo && answer?.durationSec ? (
+              <div className="absolute bottom-3 left-4 rounded-md bg-black/35 px-2 py-1 text-[11px] font-semibold tabular-nums text-white">
+                {formatDuration(answer.durationSec)}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-[18px]">
@@ -208,8 +185,10 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
 
           <div className="mt-[18px] flex flex-wrap gap-2">
             {data.questions.map((q, i) => {
-              const dur = data.answers.find((a) => a.questionId === q.id)?.durationSec;
+              const answered = data.answers.find((a) => a.questionId === q.id);
+              const dur = answered?.durationSec;
               const active = i === activeQ;
+              const done = Boolean(answered?.videoUrl);
               return (
                 <button
                   key={q.id}
@@ -221,14 +200,14 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
                       : "border-[#E0D9C8] bg-white text-muted"
                   }`}
                 >
-                  {i < activeQ && <span className="text-[10px] text-primary">✓</span>}
+                  {done && !active && <span className="text-[10px] text-primary">✓</span>}
                   {active && <span className="text-[10px]">▶</span>}
                   Q{i + 1}
-                  {dur && (
+                  {dur ? (
                     <span className={`text-[11px] font-medium ${active ? "text-primary" : "text-faint-2"}`}>
                       {formatDuration(dur)}
                     </span>
-                  )}
+                  ) : null}
                 </button>
               );
             })}
@@ -237,35 +216,30 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
           <div className="mt-[22px] border-t border-hairline-3 pt-[18px]">
             <div className="mb-3 flex items-center justify-between">
               <SectionLabel>Transcript</SectionLabel>
-              <button
-                type="button"
-                onClick={() => copyTranscript()}
-                className="text-xs font-semibold text-primary"
-              >
-                Auto-generated · Copy
-              </button>
+              {hasTranscript ? (
+                <button
+                  type="button"
+                  onClick={() => copyTranscript()}
+                  className="text-xs font-semibold text-primary"
+                >
+                  Auto-generated · Copy
+                </button>
+              ) : null}
             </div>
-            <div className="flex flex-col gap-2.5 text-sm leading-relaxed text-[#4A4F45]">
-              {(answer?.transcript
-                ? [{ time: "0:02", text: answer.transcript }]
-                : DEMO_TRANSCRIPT
-              ).map((line) => (
-                <div key={line.time} className="flex gap-3.5">
+            {hasTranscript ? (
+              <div className="flex flex-col gap-2.5 text-sm leading-relaxed text-[#4A4F45]">
+                <div className="flex gap-3.5">
                   <span className="shrink-0 pt-0.5 text-xs font-semibold tabular-nums text-[#9CB6A6]">
-                    {line.time}
+                    —
                   </span>
-                  <span
-                    className={
-                      "highlight" in line && line.highlight
-                        ? "-mx-1.5 rounded-md bg-[#F7F3EA] px-1.5 py-0.5"
-                        : undefined
-                    }
-                  >
-                    {line.text}
-                  </span>
+                  <span>{answer!.transcript}</span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <p className="text-sm text-faint">
+                No transcript for this question yet.
+              </p>
+            )}
           </div>
         </div>
 

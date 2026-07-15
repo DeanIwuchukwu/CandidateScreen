@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/db";
 import type { CandidateStage, InterviewStatus } from "@prisma/client";
 import {
-  PREVIEW_INVITE_EMAIL_PREFIX,
-  SHARE_INVITE_EMAIL_PREFIX,
+  realCandidateInviteWhere,
 } from "@/lib/candidate/internal-invites";
 import { isDevBypass } from "@/lib/dev/bypass";
 import {
@@ -63,24 +62,24 @@ export async function getDashboardStats(workspaceId: string) {
     prisma.candidateResponse.count({
       where: {
         submittedAt: { gte: new Date(Date.now() - 86400000) },
-        invite: { interview: { workspaceId } },
+        invite: { interview: { workspaceId }, ...realCandidateInviteWhere },
       },
     }),
     prisma.candidateResponse.count({
       where: {
         stage: "TO_REVIEW",
         submittedAt: { not: null },
-        invite: { interview: { workspaceId } },
+        invite: { interview: { workspaceId }, ...realCandidateInviteWhere },
       },
     }),
     prisma.invite.count({
-      where: { interview: { workspaceId }, ...realCandidateInviteFilter },
+      where: { interview: { workspaceId }, ...realCandidateInviteWhere },
     }),
     prisma.invite.count({
       where: {
         interview: { workspaceId },
         status: "COMPLETED",
-        ...realCandidateInviteFilter,
+        ...realCandidateInviteWhere,
       },
     }),
   ]);
@@ -108,7 +107,7 @@ export async function getReviewQueue(workspaceId: string, limit = 5) {
     where: {
       submittedAt: { not: null },
       stage: "TO_REVIEW",
-      invite: { interview: { workspaceId } },
+      invite: { interview: { workspaceId }, ...realCandidateInviteWhere },
     },
     include: {
       invite: { include: { interview: true } },
@@ -131,13 +130,13 @@ export async function getActiveInterviews(workspaceId: string) {
     interviews.map(async (interview) => {
       const [invited, responded] = await Promise.all([
         prisma.invite.count({
-          where: { interviewId: interview.id, ...realCandidateInviteFilter },
+          where: { interviewId: interview.id, ...realCandidateInviteWhere },
         }),
         prisma.invite.count({
           where: {
             interviewId: interview.id,
             status: "COMPLETED",
-            ...realCandidateInviteFilter,
+            ...realCandidateInviteWhere,
           },
         }),
       ]);
@@ -165,16 +164,6 @@ export async function getInterviews(workspaceId: string, status?: InterviewStatu
     orderBy: { updatedAt: "desc" },
   });
 }
-
-const realCandidateInviteFilter = {
-  NOT: {
-    OR: [
-      { email: { startsWith: PREVIEW_INVITE_EMAIL_PREFIX } },
-      { email: { startsWith: SHARE_INVITE_EMAIL_PREFIX } },
-      { candidateName: "Demo Candidate" },
-    ],
-  },
-};
 
 const interviewListInclude = {
   owner: true,
@@ -276,13 +265,13 @@ export async function getCandidateRoles(workspaceId: string) {
     interviews.map(async (interview) => {
       const [invited, responded, toReview] = await Promise.all([
         prisma.invite.count({
-          where: { interviewId: interview.id, ...realCandidateInviteFilter },
+          where: { interviewId: interview.id, ...realCandidateInviteWhere },
         }),
         prisma.invite.count({
           where: {
             interviewId: interview.id,
             status: "COMPLETED",
-            ...realCandidateInviteFilter,
+            ...realCandidateInviteWhere,
           },
         }),
         prisma.candidateResponse.count({
@@ -290,7 +279,7 @@ export async function getCandidateRoles(workspaceId: string) {
             stage: "TO_REVIEW",
             invite: {
               interviewId: interview.id,
-              ...realCandidateInviteFilter,
+              ...realCandidateInviteWhere,
             },
           },
         }),
@@ -331,13 +320,13 @@ export async function getCandidateRolesPaginated(workspaceId: string, page = 1) 
     interviews.map(async (interview) => {
       const [invited, responded, toReview] = await Promise.all([
         prisma.invite.count({
-          where: { interviewId: interview.id, ...realCandidateInviteFilter },
+          where: { interviewId: interview.id, ...realCandidateInviteWhere },
         }),
         prisma.invite.count({
           where: {
             interviewId: interview.id,
             status: "COMPLETED",
-            ...realCandidateInviteFilter,
+            ...realCandidateInviteWhere,
           },
         }),
         prisma.candidateResponse.count({
@@ -345,7 +334,7 @@ export async function getCandidateRolesPaginated(workspaceId: string, page = 1) 
             stage: "TO_REVIEW",
             invite: {
               interviewId: interview.id,
-              ...realCandidateInviteFilter,
+              ...realCandidateInviteWhere,
             },
           },
         }),
@@ -377,7 +366,7 @@ export async function getCandidateStageCounts(
         where: {
           stage,
           invite: {
-            ...realCandidateInviteFilter,
+            ...realCandidateInviteWhere,
             interview: {
               workspaceId,
               ...(interviewId ? { id: interviewId } : {}),
@@ -409,7 +398,7 @@ export async function getCandidates(
     where: {
       ...(opts.stage ? { stage: opts.stage } : {}),
       invite: {
-        ...realCandidateInviteFilter,
+        ...realCandidateInviteWhere,
         ...(search
           ? {
               candidateName: { contains: search, mode: "insensitive" as const },
@@ -453,7 +442,7 @@ export async function getCandidatesPaginated(
   const where = {
     ...(opts.stage ? { stage: opts.stage } : {}),
     invite: {
-      ...realCandidateInviteFilter,
+      ...realCandidateInviteWhere,
       ...(search
         ? {
             candidateName: { contains: search, mode: "insensitive" as const },

@@ -30,3 +30,33 @@ export function isRealCandidateInvite(invite: {
   if (invite.candidateName === "Preview") return false;
   return true;
 }
+
+/**
+ * Prisma WHERE fragment for “real” candidate invites.
+ * Explicitly allows null email/name — a bare NOT(startsWith) excludes NULL in SQL.
+ */
+export const realCandidateInviteWhere = {
+  AND: [
+    {
+      OR: [
+        { email: null },
+        {
+          AND: [
+            { NOT: { email: { startsWith: PREVIEW_INVITE_EMAIL_PREFIX } } },
+            { NOT: { email: { startsWith: SHARE_INVITE_EMAIL_PREFIX } } },
+          ],
+        },
+      ],
+    },
+    {
+      OR: [
+        { candidateName: null },
+        {
+          NOT: {
+            candidateName: { in: ["Demo Candidate", "Preview"] },
+          },
+        },
+      ],
+    },
+  ],
+};

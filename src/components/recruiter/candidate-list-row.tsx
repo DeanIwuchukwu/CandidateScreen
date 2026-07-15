@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type MouseEvent } from "react";
 import { removeCandidateAction } from "@/lib/recruiter/actions";
 import { RowActionsMenu } from "@/components/recruiter/row-actions-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/ui/star-rating";
 import {
@@ -33,6 +34,8 @@ export type CandidateListRowData = {
 export function CandidateListRow({ candidate }: { candidate: CandidateListRowData }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const reviewHref = `/app/candidates/${candidate.id}/review`;
@@ -48,33 +51,36 @@ export function CandidateListRow({ candidate }: { candidate: CandidateListRowDat
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
 
-  function handleRemove(event: MouseEvent) {
+  function openRemoveConfirm(event: MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
     if (pending) return;
+    setError(null);
+    setMenuOpen(false);
+    setConfirmOpen(true);
+  }
 
-    const name = candidate.name;
-    const confirmed = window.confirm(
-      candidate.submitted
-        ? `Remove "${name}"? Their recording, scores, and notes will be permanently deleted.`
-        : `Remove "${name}"? They will disappear from Candidates and this invite link will stop working.`,
-    );
-    if (!confirmed) return;
+  function confirmRemove() {
+    if (pending) return;
 
     startTransition(async () => {
       const result = await removeCandidateAction(candidate.id);
       if (!result.ok) {
-        window.alert(
+        setError(
           result.error === "forbidden"
             ? "This candidate cannot be removed."
             : "Candidate not found or could not be removed.",
         );
         return;
       }
-      setMenuOpen(false);
+      setConfirmOpen(false);
       router.refresh();
     });
   }
+
+  const description = candidate.submitted
+    ? `Their recording, scores, and notes will be permanently deleted.`
+    : `They will disappear from Candidates and this invite link will stop working.`;
 
   return (
     <div
@@ -159,13 +165,29 @@ export function CandidateListRow({ candidate }: { candidate: CandidateListRowDat
             type="button"
             role="menuitem"
             disabled={pending}
-            onClick={handleRemove}
+            onClick={openRemoveConfirm}
             className="w-full px-3 py-2 text-left text-[13px] font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-faint-2 disabled:hover:bg-transparent"
           >
-            {pending ? "Removing…" : "Remove candidate"}
+            Remove candidate
           </button>
         </RowActionsMenu>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Remove ${candidate.name}?`}
+        description={description}
+        confirmLabel="Remove candidate"
+        pending={pending}
+        error={error}
+        onConfirm={confirmRemove}
+        onClose={() => {
+          if (!pending) {
+            setConfirmOpen(false);
+            setError(null);
+          }
+        }}
+      />
     </div>
   );
 }

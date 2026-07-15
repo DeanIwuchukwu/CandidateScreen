@@ -7,6 +7,7 @@ import { getUserWorkspace } from "@/lib/recruiter/queries";
 import { ensureCandidateResponse } from "@/lib/candidate/invite";
 import {
   firstNameFromFullName,
+  estimateInterviewMinutes,
   mergeInviteMessage,
   sendInterviewInviteEmail,
 } from "@/lib/email";
@@ -278,6 +279,10 @@ export async function sendInterviewInvitesAction(input: {
       inviteUrl,
       senderName: user.name,
       workspaceName: workspace.name,
+      questionCount: interview.questions.length,
+      deadlineDays: input.deadlineDays,
+      allowRetakes: interview.allowRetakes,
+      estimatedMinutes: estimateInterviewMinutes(interview.questions),
     });
 
     sent++;

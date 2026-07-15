@@ -19,6 +19,11 @@ type InviteEmailPayload = {
   senderName: string;
   /** Company shown as the From display name in the inbox */
   workspaceName: string;
+  questionCount: number;
+  deadlineDays: number;
+  allowRetakes: boolean;
+  /** Approx duration label, e.g. 10 */
+  estimatedMinutes: number;
 };
 
 let resendClient: Resend | null = null;
@@ -52,17 +57,6 @@ function appUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
-function emailLayout(content: string) {
-  return `<!DOCTYPE html>
-<html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #1a2b22; max-width: 560px; margin: 0 auto; padding: 24px;">
-  <div style="margin-bottom: 24px; font-size: 18px; font-weight: 600; color: #1C6B47;">${PRODUCT_NAME}</div>
-  ${content}
-  <p style="margin-top: 32px; font-size: 12px; color: #6b7c72;">${PRODUCT_NAME} · ${PRODUCT_TAGLINE}</p>
-</body>
-</html>`;
-}
-
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -71,8 +65,20 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-function productWordmarkHtml() {
+function productWordmarkHtml(variant: "default" | "onGreen" = "default") {
+  if (variant === "onGreen") {
+    return `<span style="display:inline-block;width:22px;height:22px;background:#ffffff;border-radius:50%;vertical-align:middle;margin-right:8px;"></span>Talang<span style="color:#BFE0CD;"> Flow</span>`;
+  }
   return `<span style="display:inline-block;width:22px;height:22px;background:#1C6B47;border-radius:50%;vertical-align:middle;margin-right:8px;"></span>Talang<span style="color:#1C6B47;"> Flow</span>`;
+}
+
+/** Rough interview length from per-question limits (fallback: 2 min × questions). */
+export function estimateInterviewMinutes(
+  questions: Array<{ timeLimitSec: number }>,
+) {
+  if (questions.length === 0) return 10;
+  const totalSec = questions.reduce((sum, q) => sum + (q.timeLimitSec || 120), 0);
+  return Math.max(1, Math.round(totalSec / 60));
 }
 
 function designedEmail(opts: {
@@ -140,23 +146,65 @@ export async function sendWelcomeEmail(input: {
   companyName: string;
 }) {
   const dashboardUrl = `${appUrl()}/app`;
+  const helpUrl = `${appUrl()}/contact`;
+  const settingsUrl = `${appUrl()}/app/settings`;
+  const firstName = firstNameFromFullName(input.name);
   const subject = `Welcome to ${PRODUCT_NAME}`;
-  const text = `Hi ${input.name},
+  const text = `Hi ${firstName},
 
-Welcome to ${PRODUCT_NAME}! Your workspace for ${input.companyName} is ready.
+Your workspace for ${input.companyName} is set up and waiting. From here you can create interviews, publish job listings, and review candidate responses — all in one place.
 
 Open your dashboard: ${dashboardUrl}
 
+Get started in 3 steps:
+1. Post a job listing
+2. Build an interview
+3. Invite & review
+
 — The ${PRODUCT_NAME} team`;
 
-  const html = emailLayout(`
-    <p>Hi ${input.name},</p>
-    <p>Welcome to <strong>${PRODUCT_NAME}</strong>! Your workspace for <strong>${input.companyName}</strong> is ready.</p>
-    <p style="margin: 28px 0;">
-      <a href="${dashboardUrl}" style="display: inline-block; background: #1C6B47; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;">Open your dashboard</a>
-    </p>
-    <p style="color: #4a5c52;">Create interviews, publish job listings, and review candidate responses — all in one place.</p>
-  `);
+  const name = escapeHtml(firstName);
+  const company = escapeHtml(input.companyName);
+  const dash = escapeHtml(dashboardUrl);
+  const help = escapeHtml(helpUrl);
+  const settings = escapeHtml(settingsUrl);
+
+  const html = designedEmail({
+    preheader: `Your ${PRODUCT_NAME} workspace for ${input.companyName} is ready.`,
+    rows: `
+      <tr><td class="px" bgcolor="#1C6B47" style="padding:30px 34px 28px;background:#1C6B47;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:500;color:#ffffff;">
+            ${productWordmarkHtml("onGreen")}
+          </td>
+        </tr></table>
+        <h1 style="font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:28px;line-height:1.15;margin:22px 0 0;color:#ffffff;">Welcome, ${name} — your workspace is ready.</h1>
+      </td></tr>
+      <tr><td class="px" style="padding:30px 34px 6px;">
+        <p style="font-size:16px;line-height:1.65;color:#5C6056;margin:0;">Your workspace for <strong style="color:#19211B;">${company}</strong> is set up and waiting. From here you can create interviews, publish job listings, and review candidate responses — all in one place.</p>
+      </td></tr>
+      <tr><td class="px" style="padding:22px 34px 4px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="#1C6B47" style="border-radius:12px;">
+          <a href="${dash}" style="display:block;padding:15px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">Open your dashboard &rarr;</a>
+        </td></tr></table>
+      </td></tr>
+      <tr><td class="px" style="padding:26px 34px 4px;">
+        <div style="font-size:11.5px;letter-spacing:1px;text-transform:uppercase;color:#9A9C92;font-weight:bold;margin-bottom:16px;">Get started in 3 steps</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td width="39" valign="top" style="padding-bottom:15px;"><div style="width:26px;height:26px;border-radius:50%;background:#E7F0EA;color:#1C6B47;text-align:center;line-height:26px;font-size:12px;font-weight:bold;">1</div></td>
+              <td valign="top" style="padding-bottom:15px;"><div style="font-size:14px;font-weight:bold;color:#19211B;">Post a job listing</div><div style="font-size:13px;line-height:1.5;color:#74776E;">Share one link and start collecting applications.</div></td></tr>
+          <tr><td width="39" valign="top" style="padding-bottom:15px;"><div style="width:26px;height:26px;border-radius:50%;background:#E7F0EA;color:#1C6B47;text-align:center;line-height:26px;font-size:12px;font-weight:bold;">2</div></td>
+              <td valign="top" style="padding-bottom:15px;"><div style="font-size:14px;font-weight:bold;color:#19211B;">Build an interview</div><div style="font-size:13px;line-height:1.5;color:#74776E;">A few questions, time limits, and your branding.</div></td></tr>
+          <tr><td width="39" valign="top"><div style="width:26px;height:26px;border-radius:50%;background:#E7F0EA;color:#1C6B47;text-align:center;line-height:26px;font-size:12px;font-weight:bold;">3</div></td>
+              <td valign="top"><div style="font-size:14px;font-weight:bold;color:#19211B;">Invite &amp; review</div><div style="font-size:13px;line-height:1.5;color:#74776E;">Watch answers and decide as a team.</div></td></tr>
+        </table>
+      </td></tr>
+      <tr><td class="px" style="padding:22px 34px 26px;border-top:1px solid #F1ECE0;">
+        <div style="font-size:12px;color:#9A9C92;font-weight:bold;">${PRODUCT_NAME} &middot; ${PRODUCT_TAGLINE}</div>
+        <p style="font-size:11.5px;line-height:1.6;color:#A7A99F;margin:12px 0 0;">Need a hand getting set up? Just reply to this email. &middot; <a href="${help}" style="color:#7C9B88;">Help center</a> &middot; <a href="${settings}" style="color:#7C9B88;">Settings</a></p>
+      </td></tr>
+    `,
+  });
 
   return sendEmail({ to: input.to, subject, html, text });
 }
@@ -271,16 +319,82 @@ This link expires in 7 days.`;
 }
 
 export async function sendInterviewInviteEmail(payload: InviteEmailPayload) {
-  const subject = `Video interview invitation — ${payload.jobTitle}`;
-  const text = `${payload.message}\n\nRecord your interview: ${payload.inviteUrl}\n\n— ${payload.senderName} via ${PRODUCT_NAME}`;
+  const firstName = firstNameFromFullName(payload.candidateName);
+  const subject = `You're invited: ${payload.jobTitle} video interview`;
+  const text = `Hi ${firstName},
 
-  const html = emailLayout(`
-    <p style="white-space: pre-wrap;">${payload.message.replace(/\n/g, "<br>")}</p>
-    <p style="margin: 28px 0;">
-      <a href="${payload.inviteUrl}" style="display: inline-block; background: #1C6B47; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 600;">Record your interview</a>
-    </p>
-    <p style="color: #6b7c72; font-size: 14px;">From ${payload.senderName} at ${payload.workspaceName}</p>
-  `);
+${payload.workspaceName} has invited you to a short video interview for ${payload.jobTitle}.
+
+${payload.message}
+
+≈ ${payload.estimatedMinutes} minutes · ${payload.questionCount} questions · Record anytime${
+    payload.allowRetakes ? " · Retakes allowed" : ""
+  }
+
+Please respond within ${payload.deadlineDays} days.
+
+Record your interview: ${payload.inviteUrl}
+
+— ${payload.senderName} at ${payload.workspaceName} via ${PRODUCT_NAME}`;
+
+  const name = escapeHtml(firstName);
+  const company = escapeHtml(payload.workspaceName);
+  const role = escapeHtml(payload.jobTitle);
+  const inviteUrl = escapeHtml(payload.inviteUrl);
+  const sender = escapeHtml(payload.senderName);
+  const senderInitials = escapeHtml(initialsFromName(payload.senderName) || "TF");
+  const quote = escapeHtml(payload.message.replace(/\s+/g, " ").trim());
+  const minutes = escapeHtml(String(payload.estimatedMinutes));
+  const questions = escapeHtml(String(payload.questionCount));
+  const deadline = escapeHtml(String(payload.deadlineDays));
+  const contactUrl = escapeHtml(`${appUrl()}/contact`);
+  const retakeChip = payload.allowRetakes
+    ? `<span style="display:inline-block;border:1px solid #E6E0D2;border-radius:999px;padding:7px 13px;margin:0 6px 8px 0;">Retakes allowed</span>`
+    : "";
+
+  const html = designedEmail({
+    preheader: `A short video interview from ${payload.workspaceName} — record whenever suits you.`,
+    rows: `
+      <tr><td class="px" style="padding:26px 34px;border-bottom:1px solid #F1ECE0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:500;color:#19211B;">${productWordmarkHtml()}</td>
+          <td align="right" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#9A9C92;font-weight:bold;">${company}</td>
+        </tr></table>
+      </td></tr>
+      <tr><td class="px" style="padding:32px 34px 8px;">
+        <span style="display:inline-block;font-size:12px;color:#1C6B47;background:#E7F0EA;padding:6px 12px;border-radius:999px;font-weight:bold;margin-bottom:16px;">Video interview &middot; ${role}</span>
+        <h1 style="font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:28px;line-height:1.15;margin:12px 0 0;color:#19211B;">Hi ${name} — we&rsquo;d love to hear how you think.</h1>
+        <p style="font-size:16px;line-height:1.65;color:#5C6056;margin:14px 0 0;">${company} has invited you to a short video interview. There&rsquo;s no live call to schedule and no trick questions — just a few prompts you can record whenever suits you${payload.allowRetakes ? ", and re-record if you&rsquo;d like" : ""}.</p>
+      </td></tr>
+      <tr><td class="px" style="padding:20px 34px 4px;font-size:13px;color:#3C4138;">
+        <span style="display:inline-block;border:1px solid #E6E0D2;border-radius:999px;padding:7px 13px;margin:0 6px 8px 0;">&asymp; ${minutes} minutes</span>
+        <span style="display:inline-block;border:1px solid #E6E0D2;border-radius:999px;padding:7px 13px;margin:0 6px 8px 0;">${questions} question${payload.questionCount === 1 ? "" : "s"}</span>
+        <span style="display:inline-block;border:1px solid #E6E0D2;border-radius:999px;padding:7px 13px;margin:0 6px 8px 0;">Record anytime</span>
+        ${retakeChip}
+      </td></tr>
+      <tr><td class="px" style="padding:24px 34px 6px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="#1C6B47" style="border-radius:12px;">
+          <a href="${inviteUrl}" style="display:block;padding:15px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">Record your interview &rarr;</a>
+        </td></tr></table>
+        <p style="font-size:12px;color:#9A9C92;text-align:center;margin:12px 0 0;">Please respond within <strong style="color:#5C6056;">${deadline} days</strong> &middot; your link is private to you</p>
+      </td></tr>
+      <tr><td class="px" style="padding:24px 34px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F3EA;border:1px solid #ECE5D6;border-radius:14px;"><tr>
+          <td width="52" valign="top" style="padding:16px 0 16px 18px;">
+            <div style="width:40px;height:40px;border-radius:50%;background:#1C6B47;color:#fff;text-align:center;line-height:40px;font-size:13px;font-weight:bold;">${senderInitials}</div>
+          </td>
+          <td valign="top" style="padding:16px 18px;">
+            <div style="font-size:13.5px;font-weight:bold;color:#19211B;">${sender} <span style="color:#9A9C92;font-weight:normal;">&middot; ${company}</span></div>
+            <p style="font-family:Georgia,serif;font-style:italic;font-size:14.5px;line-height:1.5;color:#4A4F45;margin:5px 0 0;">&ldquo;${quote}&rdquo;</p>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td class="px" style="padding:22px 34px 26px;border-top:1px solid #F1ECE0;">
+        <div style="font-size:12px;color:#9A9C92;font-weight:bold;">${PRODUCT_NAME} &middot; ${PRODUCT_TAGLINE}</div>
+        <p style="font-size:11.5px;line-height:1.6;color:#A7A99F;margin:12px 0 0;">You received this because ${company} invited you to interview. Trouble with the button? Copy this link: <a href="${inviteUrl}" style="color:#7C9B88;">${inviteUrl}</a> &middot; <a href="${contactUrl}" style="color:#7C9B88;">Not you?</a></p>
+      </td></tr>
+    `,
+  });
 
   return sendEmail({
     to: payload.to,
@@ -340,9 +454,16 @@ You've got a confirmation of receipt. The hiring team will reach out if there's 
           <td width="50%" style="padding:16px;text-align:center;"><div style="font-family:Georgia,serif;font-size:22px;color:#19211B;">${submitted}</div><div style="font-size:11.5px;color:#80837A;">Submitted</div></td>
         </tr></table>
       </td></tr>
+      <tr><td class="px" style="padding:22px 34px 4px;">
+        <div style="font-size:11.5px;letter-spacing:1px;text-transform:uppercase;color:#9A9C92;font-weight:bold;margin-bottom:14px;">What happens next</div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td width="20" valign="top" style="padding-bottom:12px;"><div style="width:8px;height:8px;border-radius:50%;background:#1C6B47;margin-top:6px;"></div></td><td valign="top" style="padding-bottom:12px;font-size:13.5px;line-height:1.5;color:#5C6056;"><strong style="color:#19211B;">The team reviews your answers</strong> when they&rsquo;re ready.</td></tr>
+          <tr><td width="20" valign="top"><div style="width:8px;height:8px;border-radius:50%;background:#CDD6CE;margin-top:6px;"></div></td><td valign="top" style="font-size:13.5px;line-height:1.5;color:#5C6056;">You&rsquo;ll hear back by email if there&rsquo;s a next step.</td></tr>
+        </table>
+      </td></tr>
       <tr><td class="px" style="padding:22px 34px 26px;border-top:1px solid #F1ECE0;">
         <div style="font-size:12px;color:#9A9C92;font-weight:bold;">${PRODUCT_NAME} &middot; ${PRODUCT_TAGLINE}</div>
-        <p style="font-size:11.5px;line-height:1.6;color:#A7A99F;margin:12px 0 0;">Sent on behalf of ${company}. Questions? <a href="${contactUrl}" style="color:#7C9B88;">Contact us</a></p>
+        <p style="font-size:11.5px;line-height:1.6;color:#A7A99F;margin:12px 0 0;">Sent on behalf of ${company}. You can request deletion of your recordings anytime &middot; <a href="${contactUrl}" style="color:#7C9B88;">Contact us</a></p>
       </td></tr>
     `,
   });

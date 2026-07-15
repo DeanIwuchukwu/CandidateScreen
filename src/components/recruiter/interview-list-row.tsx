@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { deleteInterviewAction } from "@/lib/recruiter/actions";
 import { CopyInviteLinkButton } from "@/components/recruiter/copy-invite-link-button";
 import { RowActionsMenu } from "@/components/recruiter/row-actions-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatInterviewMeta } from "@/lib/recruiter/format";
 import {
   InterviewStatusDot,
@@ -32,6 +33,8 @@ export type InterviewListRowData = {
 export function InterviewListRow({ interview }: { interview: InterviewListRowData }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -54,28 +57,27 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
 
-  function handleDelete() {
+  function openDeleteConfirm() {
     if (!canDelete || pending) return;
+    setError(null);
+    setMenuOpen(false);
+    setConfirmOpen(true);
+  }
 
-    const confirmed = window.confirm(
-      `Delete "${interview.title}"? This cannot be undone.`,
-    );
-    if (!confirmed) return;
+  function confirmDelete() {
+    if (pending) return;
 
     startTransition(async () => {
       const result = await deleteInterviewAction(interview.id);
       if (!result.ok) {
-        if (result.error === "has_responses") {
-          window.alert(
-            "This interview has candidate responses and cannot be deleted.",
-          );
-        } else {
-          window.alert("Interview not found or could not be deleted.");
-        }
+        setError(
+          result.error === "has_responses"
+            ? "This interview has candidate responses and cannot be deleted."
+            : "Interview not found or could not be deleted.",
+        );
         return;
       }
-
-      setMenuOpen(false);
+      setConfirmOpen(false);
       router.refresh();
     });
   }
@@ -172,13 +174,29 @@ export function InterviewListRow({ interview }: { interview: InterviewListRowDat
                 ? undefined
                 : "Interviews with candidate responses cannot be deleted"
             }
-            onClick={handleDelete}
+            onClick={openDeleteConfirm}
             className="w-full px-3 py-2 text-left text-[13px] font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-faint-2 disabled:hover:bg-transparent"
           >
-            {pending ? "Deleting…" : "Delete interview"}
+            Delete interview
           </button>
         </RowActionsMenu>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Delete ${interview.title}?`}
+        description="This cannot be undone. The interview and its invites will be removed."
+        confirmLabel="Delete interview"
+        pending={pending}
+        error={error}
+        onConfirm={confirmDelete}
+        onClose={() => {
+          if (!pending) {
+            setConfirmOpen(false);
+            setError(null);
+          }
+        }}
+      />
     </div>
   );
 }

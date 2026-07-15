@@ -13,6 +13,7 @@ import { ensureCandidateResponse } from "@/lib/candidate/invite";
 import { isRealCandidateInvite } from "@/lib/candidate/internal-invites";
 import {
   firstNameFromFullName,
+  estimateInterviewMinutes,
   mergeInviteMessage,
   sendInterviewInviteEmail,
 } from "@/lib/email";
@@ -418,6 +419,7 @@ export async function inviteCandidatesBulkToInterviewAction(
       workspaceId: workspace.id,
       status: { in: ["ACTIVE", "CLOSED"] },
     },
+    include: { questions: { select: { timeLimitSec: true } } },
   });
   if (!interview) return { ok: false, error: "Interview not found." };
 
@@ -465,6 +467,10 @@ export async function inviteCandidatesBulkToInterviewAction(
         inviteUrl: invitePublicUrl(invite.token, appUrl()),
         senderName: user.name,
         workspaceName: workspace.name,
+        questionCount: interview.questions.length,
+        deadlineDays: interview.deadlineDays,
+        allowRetakes: interview.allowRetakes,
+        estimatedMinutes: estimateInterviewMinutes(interview.questions),
       });
 
       sent++;

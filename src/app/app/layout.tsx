@@ -1,4 +1,5 @@
 import { requireSessionUser } from "@/lib/auth/session";
+import { getUserWorkspace } from "@/lib/recruiter/queries";
 import { RecruiterSidebar } from "@/components/recruiter/recruiter-sidebar";
 import { DevBypassBanner } from "@/components/dev/dev-bypass-banner";
 import { isDevBypass } from "@/lib/dev/bypass";
@@ -9,13 +10,18 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireSessionUser();
-  const membership = user.memberships[0];
-  const workspaceName = membership?.workspace.name ?? "Workspace";
+  const membership = await getUserWorkspace(user.id);
+  const workspaceName = membership.workspace.name ?? "Workspace";
+  const enabledProducts = membership.workspace.enabledProducts ?? [];
   const bypass = isDevBypass();
 
   return (
     <div className="flex min-h-screen bg-surface">
-      <RecruiterSidebar userName={user.name} workspaceName={workspaceName} />
+      <RecruiterSidebar
+        userName={user.name}
+        workspaceName={workspaceName}
+        enabledProducts={enabledProducts}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         {bypass && <DevBypassBanner />}
         {children}

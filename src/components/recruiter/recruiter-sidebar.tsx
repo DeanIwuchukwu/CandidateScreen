@@ -9,36 +9,74 @@ import {
   ListVideo,
   Settings,
   Users,
+  UserRound,
 } from "lucide-react";
 import { Wordmark } from "@/components/ui/wordmark";
 import { cn } from "@/lib/utils";
+import {
+  hasProduct,
+  type WorkspaceProductId,
+} from "@/lib/workspace/products";
 
-const nav = [
+const coreNav = [
   { href: "/app", label: "Dashboard", icon: LayoutGrid, exact: true },
-  { href: "/app/jobs", label: "Jobs", icon: Briefcase },
   { href: "/app/interviews", label: "Interviews", icon: ListVideo },
   { href: "/app/candidates", label: "Candidates", icon: Users },
-  { href: "/app/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/app/settings", label: "Settings", icon: Settings },
+] as const;
+
+const productNav: Array<{
+  productId: WorkspaceProductId;
+  href: string;
+  label: string;
+  icon: typeof Briefcase;
+}> = [
+  { productId: "jobs", href: "/app/jobs", label: "Jobs", icon: Briefcase },
+  {
+    productId: "employees",
+    href: "/app/employees",
+    label: "Employees",
+    icon: UserRound,
+  },
+  {
+    productId: "analytics",
+    href: "/app/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+  },
 ];
+
+const settingsNav = {
+  href: "/app/settings",
+  label: "Settings",
+  icon: Settings,
+};
 
 export function RecruiterSidebar({
   userName,
   workspaceName,
+  enabledProducts = [],
 }: {
   userName: string;
   workspaceName: string;
+  enabledProducts?: string[];
 }) {
   const pathname = usePathname();
+
+  const nav = [
+    ...coreNav,
+    ...productNav.filter((item) => hasProduct(enabledProducts, item.productId)),
+    settingsNav,
+  ];
 
   return (
     <aside className="flex w-[232px] shrink-0 flex-col border-r border-hairline bg-paper-2 p-5">
       <Wordmark href="/app" className="px-2 pb-5" />
       <nav className="flex flex-col gap-0.5">
         {nav.map((item) => {
-          const active = item.exact
-            ? pathname === item.href
-            : pathname.startsWith(item.href);
+          const active =
+            "exact" in item && item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
             <Link

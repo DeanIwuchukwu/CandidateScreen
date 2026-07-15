@@ -25,6 +25,7 @@ export const MOCK_USER = {
         careersUrl: "https://northwind.example/careers",
         logoUrl: null,
         accentColor: "#1C6B47",
+        enabledProducts: [] as string[],
         createdAt: now,
         updatedAt: now,
       },

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Products settings — preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #19211b;
+      --muted: #5c6056;
+      --faint: #80837a;
+      --paper: #f6f2ea;
+      --paper-2: #faf7f0;
+      --surface: #ffffff;
+      --primary: #1c6b47;
+      --primary-tint-2: #eaf1ec;
+      --hairline: #ece5d6;
+      --hairline-3: #ebe5d8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--surface);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .shell { display: flex; min-height: 100vh; }
+
+    aside {
+      width: 232px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--hairline);
+      background: var(--paper-2);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wordmark {
+      font-family: "Newsreader", Georgia, serif;
+      font-size: 20px;
+      font-weight: 500;
+      padding: 0 8px 20px;
+    }
+
+    nav { display: flex; flex-direction: column; gap: 2px; }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .nav-link.active {
+      background: var(--primary-tint-2);
+      color: var(--primary);
+    }
+
+    .aside-footer {
+      margin-top: auto;
+      border-top: 1px solid var(--hairline);
+      padding: 16px 8px 0;
+    }
+    .user { display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 999px;
+      background: var(--primary); color: #fff;
+      display: grid; place-items: center;
+      font-size: 12px; font-weight: 600;
+    }
+    .user-name { font-size: 13px; font-weight: 600; }
+    .user-ws { font-size: 12px; font-weight: 500; color: var(--faint); }
+
+    main { flex: 1; min-width: 0; }
+
+    .page-header { padding: 22px 32px 0; }
+    h1 {
+      margin: 0;
+      font-family: "Newsreader", Georgia, serif;
+      font-size: 28px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .tabs {
+      margin-top: 18px;
+      display: flex;
+      gap: 24px;
+      border-bottom: 1px solid var(--hairline-3);
+    }
+    .tab {
+      padding-bottom: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--faint);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .content { padding: 26px 32px; }
+
+    .intro {
+      margin: 0;
+      max-width: 36rem;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .products {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .products { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      border: 1px solid var(--hairline);
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 16px 20px;
+      min-height: 148px;
+    }
+
+    .card-title { font-size: 15px; font-weight: 600; }
+    .card-desc {
+      margin: 4px 0 0;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+    .card-status {
+      margin: 8px 0 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      display: none;
+    }
+    .card.is-on .card-status { display: block; }
+
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      height: 36px;
+      padding: 0 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      align-self: flex-start;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--ink);
+      border-color: #e0d9c8;
+      display: none;
+    }
+    .card.is-on .btn-primary { display: none; }
+    .card.is-on .btn-secondary { display: inline-flex; align-items: center; }
+
+    .hint {
+      margin: 28px 32px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--paper);
+      border: 1px dashed var(--hairline);
+      font-size: 12.5px;
+      color: var(--faint);
+      max-width: 720px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="wordmark">Talang Flow</div>
+      <nav id="sidebar-nav">
+        <a class="nav-link" href="#">Dashboard</a>
+        <a class="nav-link" href="#">Interviews</a>
+        <a class="nav-link" href="#">Candidates</a>
+        <a class="nav-link active" href="#" data-settings>Settings</a>
+      </nav>
+      <div class="aside-footer">
+        <div class="user">
+          <div class="avatar">MC</div>
+          <div>
+            <div class="user-name">Maya Chen</div>
+            <div class="user-ws">Urban Hive</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="page-header">
+        <h1>Settings</h1>
+        <div class="tabs">
+          <a class="tab" href="#">Workspace</a>
+          <a class="tab" href="#">Team</a>
+          <a class="tab active" href="#">Products</a>
+          <a class="tab" href="#">Notifications</a>
+          <a class="tab" href="#">Billing</a>
+        </div>
+      </div>
+
+      <div class="content">
+        <p class="intro">
+          Add products to your workspace to show them in the sidebar.
+        </p>
+
+        <div class="products">
+          <div class="card" data-product="jobs" data-label="Jobs">
+            <div>
+              <div class="card-title">Jobs</div>
+              <p class="card-desc">Publish job listings, collect applicants, and invite them to interviews.</p>
+              <p class="card-status">Added · visible in navigation</p>
+            </div>
+            <div>
+              <button type="button" class="btn btn-primary" data-toggle>Add</button>
+              <button type="button" class="btn btn-secondary" data-toggle>Remove</button>
+            </div>
+          </div>
+
+          <div class="card" data-product="analytics" data-label="Analytics">
+            <div>
+              <div class="card-title">Analytics</div>
+              <p class="card-desc">Track funnel completion, review pace, and interview performance.</p>
+              <p class="card-status">Added · visible in navigation</p>
+            </div>
+            <div>
+              <button type="button" class="btn btn-primary" data-toggle>Add</button>
+              <button type="button" class="btn btn-secondary" data-toggle>Remove</button>
+            </div>
+          </div>
+
+          <div class="card" data-product="employees" data-label="Employees">
+            <div>
+              <div class="card-title">Employee management</div>
+              <p class="card-desc">Keep a simple roster of people on your team beyond hiring.</p>
+              <p class="card-status">Added · visible in navigation</p>
+            </div>
+            <div>
+              <button type="button" class="btn btn-primary" data-toggle>Add</button>
+              <button type="button" class="btn btn-secondary" data-toggle>Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="hint">
+        Preview only — Add inserts the item into the sidebar; Remove deletes it from nav entirely.
+      </p>
+    </main>
+  </div>
+
+  <script>
+    const nav = document.getElementById("sidebar-nav");
+    const settingsLink = nav.querySelector("[data-settings]");
+    const order = ["jobs", "employees", "analytics"];
+
+    function renderProductNav() {
+      nav.querySelectorAll("[data-product-nav]").forEach((el) => el.remove());
+
+      order.forEach((id) => {
+        const card = document.querySelector(`.card[data-product="${id}"]`);
+        if (!card?.classList.contains("is-on")) return;
+
+        const link = document.createElement("a");
+        link.href = "#";
+        link.className = "nav-link";
+        link.dataset.productNav = id;
+        link.textContent = card.dataset.label;
+        nav.insertBefore(link, settingsLink);
+      });
+    }
+
+    document.querySelectorAll("[data-toggle]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest(".card");
+        card.classList.toggle("is-on");
+        renderProductNav();
+      });
+    });
+  </script>
+</body>
+</html>

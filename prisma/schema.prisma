@@ -80,6 +80,8 @@ model Workspace {
   careersUrl String?
   logoUrl    String?
   accentColor String  @default("#1C6B47")
+  /// Product keys enabled for this workspace: jobs | analytics | employees
+  enabledProducts String[] @default([])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -87,6 +89,7 @@ model Workspace {
   teamInvites WorkspaceInvite[]
   interviews Interview[]
   jobs       Job[]
+  employees  Employee[]
 }
 
 model WorkspaceMember {
@@ -298,4 +301,18 @@ model JobApplication {
 
   @@unique([jobId, email])
   @@index([jobId, stage])
+}
+
+model Employee {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  email       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId])
 }

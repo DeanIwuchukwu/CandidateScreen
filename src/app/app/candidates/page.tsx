@@ -10,6 +10,10 @@ import {
 import { getInterviewPipelineStats } from "@/lib/recruiter/pipeline-stats";
 import { parsePage } from "@/lib/recruiter/pagination";
 import { formatRelativeTime } from "@/lib/recruiter/format";
+import {
+  candidateStatusPillTone,
+  getCandidateDisplayStatus,
+} from "@/lib/recruiter/candidate-status";
 import { CandidatesPipelineActions } from "@/components/recruiter/candidates-pipeline-actions";
 import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/ui/star-rating";
@@ -70,28 +74,18 @@ function initialsFromName(name: string | null | undefined) {
 }
 
 function rowPresentation(c: CandidateRow) {
-  const statusLabel =
-    c.statusLabel ??
-    (c.submittedAt
-      ? c.overallRating || c.decision
-        ? "Reviewed"
-        : "New"
-      : "In progress");
+  const statusLabel = getCandidateDisplayStatus({
+    submittedAt: c.submittedAt,
+    stage: c.stage,
+  });
   const avatar = c.avatar ?? {
     initials: initialsFromName(c.invite.candidateName),
     color: "#1C6B47",
   };
-  const isReviewed = c.reviewed ?? statusLabel === "Reviewed";
   const inProgress = statusLabel === "In progress";
-  const pillTone: "new" | "started" | "reviewed" | "progress" | "muted" =
-    statusLabel === "Reviewed"
-      ? "reviewed"
-      : statusLabel === "In progress"
-        ? "progress"
-        : statusLabel === "Started"
-          ? "started"
-          : "new";
-  return { statusLabel, avatar, isReviewed, inProgress, pillTone };
+  const awaitingDecision = statusLabel === "To review";
+  const pillTone = candidateStatusPillTone(statusLabel);
+  return { statusLabel, avatar, inProgress, awaitingDecision, pillTone };
 }
 
 export default async function CandidatesPage({
@@ -275,7 +269,7 @@ export default async function CandidatesPage({
             </div>
           ) : (
             rows.map((c) => {
-              const { statusLabel, avatar, isReviewed, inProgress, pillTone } =
+              const { statusLabel, avatar, inProgress, awaitingDecision, pillTone } =
                 rowPresentation(c);
               const answered = c.answers.length;
               const reviewHref = `/app/candidates/${c.id}/review`;
@@ -284,7 +278,7 @@ export default async function CandidatesPage({
                 <Link
                   key={c.id}
                   href={reviewHref}
-                  className={`grid items-center gap-4 border-b border-hairline-2 px-[22px] py-3.5 last:border-0 hover:bg-reviewed ${isReviewed ? "bg-[#FCFAF5]" : ""}`}
+                  className={`grid items-center gap-4 border-b border-hairline-2 px-[22px] py-3.5 last:border-0 hover:bg-reviewed ${!awaitingDecision && !inProgress ? "bg-[#FCFAF5]" : ""}`}
                   style={{ gridTemplateColumns: grid }}
                 >
                   <div className="flex items-center gap-3">
@@ -322,11 +316,11 @@ export default async function CandidatesPage({
                   </span>
                   <div className="text-right">
                     <Button
-                      variant={isReviewed ? "secondary" : "primary"}
+                      variant={awaitingDecision ? "primary" : "secondary"}
                       size="sm"
                       tabIndex={-1}
                     >
-                      {isReviewed ? "Open" : inProgress ? "Open" : "Review"}
+                      {awaitingDecision ? "Review" : "Open"}
                     </Button>
                   </div>
                 </Link>

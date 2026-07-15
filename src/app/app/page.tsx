@@ -8,6 +8,10 @@ import {
   getUserWorkspace,
 } from "@/lib/recruiter/queries";
 import { formatRelativeTime } from "@/lib/recruiter/format";
+import {
+  candidateStatusPillTone,
+  getCandidateDisplayStatus,
+} from "@/lib/recruiter/candidate-status";
 import { Button } from "@/components/ui/button";
 import {
   ResponseProgress,
@@ -117,16 +121,11 @@ export default async function DashboardPage() {
             <div className="flex flex-col gap-2.5">
               {queue.map((r, i) => {
                 const qCount = r.answers.length || 5;
-                const statusLabel =
-                  "statusLabel" in r
-                    ? (r as { statusLabel: string }).statusLabel
-                    : "New";
-                const tone =
-                  statusLabel === "Started"
-                    ? "started"
-                    : statusLabel === "New"
-                      ? "new"
-                      : "muted";
+                const statusLabel = getCandidateDisplayStatus({
+                  submittedAt: r.submittedAt,
+                  stage: r.stage,
+                });
+                const tone = candidateStatusPillTone(statusLabel);
 
                 return (
                   <div

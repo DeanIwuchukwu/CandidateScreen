@@ -222,7 +222,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 pb-20 md:px-14">
+      <section id="action" className="mx-auto max-w-7xl px-6 pb-20 md:px-14">
         <div className="rounded-[22px] border border-hairline bg-surface px-8 py-14 text-center">
           <h2 className="font-display text-[40px] font-medium leading-[1.08]">
             Start screening better this week.

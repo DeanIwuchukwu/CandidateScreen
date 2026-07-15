@@ -222,6 +222,48 @@ export async function deleteInterviewAction(
   return { ok: true };
 }
 
+export async function removeCandidateAction(
+  responseId: string,
+): Promise<{ ok: true } | { ok: false; error: "not_found" | "forbidden" }> {
+  if (isDevBypass()) {
+    revalidatePath("/app/candidates");
+    revalidatePath("/app");
+    revalidatePath("/app/analytics");
+    return { ok: true };
+  }
+
+  const { workspace } = await workspaceGuard();
+  const response = await prisma.candidateResponse.findFirst({
+    where: {
+      id: responseId,
+      invite: { interview: { workspaceId: workspace.id } },
+    },
+    include: {
+      invite: {
+        select: {
+          id: true,
+          email: true,
+          candidateName: true,
+        },
+      },
+    },
+  });
+
+  if (!response) return { ok: false, error: "not_found" };
+  if (!isRealCandidateInvite(response.invite)) {
+    return { ok: false, error: "forbidden" };
+  }
+
+  // Cascade removes CandidateResponse, Answer, RubricRating; JobApplication.invite → null.
+  await prisma.invite.delete({ where: { id: response.invite.id } });
+
+  revalidatePath("/app/candidates");
+  revalidatePath("/app");
+  revalidatePath("/app/analytics");
+  revalidatePath("/app/interviews");
+  return { ok: true };
+}
+
 import { getOrCreateShareInviteToken } from "@/lib/recruiter/share-invite";
 
 export async function publishInterviewAction(interviewId: string) {

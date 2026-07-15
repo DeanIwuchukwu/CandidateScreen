@@ -100,7 +100,8 @@ function CandidateHowItWorksDialog({
 
         <p className="mt-5 flex items-center gap-2 border-t border-hairline pt-4 text-[12.5px] text-faint">
           <span className="text-primary">🔒</span>
-          Recordings are shared only with the {workspaceName} hiring team.
+          Recordings are shared only with the {workspaceName} hiring team and are deleted 30
+          days after recording.
         </p>
 
         <div className="mt-6 flex justify-end">

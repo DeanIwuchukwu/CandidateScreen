@@ -261,7 +261,13 @@ This link expires in 7 days.`;
     `,
   });
 
-  return sendEmail({ to: input.to, subject, html, text });
+  return sendEmail({
+    to: input.to,
+    subject,
+    html,
+    text,
+    fromName: input.workspaceName,
+  });
 }
 
 export async function sendInterviewInviteEmail(payload: InviteEmailPayload) {

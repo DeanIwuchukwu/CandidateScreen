@@ -331,7 +331,8 @@ function CandidateFlowInner({ data }: Props) {
             </ol>
             <p className="mt-6 flex items-center gap-2 border-t border-hairline pt-4 text-[12.5px] text-faint">
               <span className="text-primary">🔒</span>
-              Recordings are shared only with the {data.interview.workspaceName} hiring team.
+              Recordings are shared only with the {data.interview.workspaceName} hiring team
+              and are deleted 30 days after recording.
             </p>
           </div>
         </div>
@@ -758,7 +759,8 @@ function DoneScreen({ data, questionCount }: { data: InvitePayload; questionCoun
           </div>
         )}
         <p className="mt-8 text-xs text-faint">
-          Your recordings are stored securely and shared only with the hiring team.
+          Your recordings are stored securely, shared only with the hiring team, and deleted
+          30 days after recording.
         </p>
       </div>
     </div>

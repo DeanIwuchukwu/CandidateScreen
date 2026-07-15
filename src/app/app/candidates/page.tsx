@@ -15,15 +15,13 @@ import {
   getCandidateDisplayStatus,
 } from "@/lib/recruiter/candidate-status";
 import { CandidatesPipelineActions } from "@/components/recruiter/candidates-pipeline-actions";
+import { CandidateListRow } from "@/components/recruiter/candidate-list-row";
 import { Button } from "@/components/ui/button";
-import { StarRating } from "@/components/ui/star-rating";
 import {
-  AvatarCircle,
   Breadcrumb,
   CountTabs,
   SearchField,
   SortLabel,
-  StatusPill,
   TableHeader,
   TablePagination,
 } from "@/components/recruiter/recruiter-ui";
@@ -37,8 +35,8 @@ const stages: Array<{ key: CandidateStage | "ALL"; label: string }> = [
   { key: "ALL", label: "All" },
 ];
 
-const TABLE_GRID_SCOPED = "2.4fr 1.1fr 1.3fr 1.2fr 0.6fr";
-const TABLE_GRID_GLOBAL = "2fr 1.5fr 1.1fr 1.2fr 1.1fr 0.6fr";
+const TABLE_GRID_SCOPED = "2.4fr 1.1fr 1.3fr 1.2fr 1fr";
+const TABLE_GRID_GLOBAL = "2fr 1.5fr 1.1fr 1.2fr 1.1fr 1fr";
 
 type CandidateRow = Awaited<
   ReturnType<typeof getCandidatesPaginated>
@@ -271,59 +269,30 @@ export default async function CandidatesPage({
             rows.map((c) => {
               const { statusLabel, avatar, inProgress, awaitingDecision, pillTone } =
                 rowPresentation(c);
-              const answered = c.answers.length;
-              const reviewHref = `/app/candidates/${c.id}/review`;
 
               return (
-                <Link
+                <CandidateListRow
                   key={c.id}
-                  href={reviewHref}
-                  className={`grid items-center gap-4 border-b border-hairline-2 px-[22px] py-3.5 last:border-0 hover:bg-reviewed ${!awaitingDecision && !inProgress ? "bg-[#FCFAF5]" : ""}`}
-                  style={{ gridTemplateColumns: grid }}
-                >
-                  <div className="flex items-center gap-3">
-                    <AvatarCircle initials={avatar.initials} color={avatar.color} />
-                    <div>
-                      <div className="text-sm font-semibold">
-                        {c.invite.candidateName ?? "Candidate"}
-                      </div>
-                      <div className="text-xs font-medium text-faint">
-                        {inProgress
-                          ? `${answered} answered · in progress`
-                          : `${answered} answered${c.durationMin ? ` · ${c.durationMin} min` : ""}`}
-                      </div>
-                    </div>
-                  </div>
-                  {!scoped && (
-                    <div className="min-w-0">
-                      <div className="truncate text-[13px] font-semibold">
-                        {c.invite.interview.title}
-                      </div>
-                    </div>
-                  )}
-                  <StatusPill tone={pillTone}>{statusLabel}</StatusPill>
-                  <div>
-                    {c.overallRating ? (
-                      <StarRating value={c.overallRating} readOnly size={15} />
-                    ) : (
-                      <span className="text-xs font-medium text-[#E4DDCD]">
-                        {inProgress ? "—" : "Not rated"}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[13px] font-medium text-muted">
-                    {c.submittedAt ? formatRelativeTime(c.submittedAt) : "—"}
-                  </span>
-                  <div className="text-right">
-                    <Button
-                      variant={awaitingDecision ? "primary" : "secondary"}
-                      size="sm"
-                      tabIndex={-1}
-                    >
-                      {awaitingDecision ? "Review" : "Open"}
-                    </Button>
-                  </div>
-                </Link>
+                  candidate={{
+                    id: c.id,
+                    name: c.invite.candidateName ?? "Candidate",
+                    roleTitle: scoped ? null : c.invite.interview.title,
+                    statusLabel,
+                    pillTone,
+                    inProgress,
+                    awaitingDecision,
+                    answered: c.answers.length,
+                    durationMin: c.durationMin,
+                    overallRating: c.overallRating,
+                    submittedAtLabel: c.submittedAt
+                      ? formatRelativeTime(c.submittedAt)
+                      : "—",
+                    submitted: Boolean(c.submittedAt),
+                    avatar,
+                    scoped,
+                    grid,
+                  }}
+                />
               );
             })
           )}

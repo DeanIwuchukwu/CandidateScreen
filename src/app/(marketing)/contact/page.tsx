@@ -35,7 +35,7 @@ export default async function ContactPage({
               Within a few hours, Mon–Fri
             </ContactInfoRow>
             <ContactInfoRow icon={MapPin} title="Office">
-              Remote-first · Lisbon & Toronto
+              Remote-first · USA
             </ContactInfoRow>
           </div>
         </div>

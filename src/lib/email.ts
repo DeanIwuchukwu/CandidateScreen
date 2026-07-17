@@ -363,7 +363,7 @@ Record your interview: ${payload.inviteUrl}
       </td></tr>
       <tr><td class="px" style="padding:32px 34px 8px;">
         <span style="display:inline-block;font-size:12px;color:#1C6B47;background:#E7F0EA;padding:6px 12px;border-radius:999px;font-weight:bold;margin-bottom:16px;">Video interview &middot; ${role}</span>
-        <h1 style="font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:28px;line-height:1.15;margin:12px 0 0;color:#19211B;">Hi ${name} — we&rsquo;d love to hear how you think.</h1>
+        <h1 style="font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:28px;line-height:1.15;margin:12px 0 0;color:#19211B;">Hi ${name} — we&rsquo;d love to hear from you.</h1>
         <p style="font-size:16px;line-height:1.65;color:#5C6056;margin:14px 0 0;">${company} has invited you to a short video interview. There&rsquo;s no live call to schedule and no trick questions — just a few prompts you can record whenever suits you${payload.allowRetakes ? ", and re-record if you&rsquo;d like" : ""}.</p>
       </td></tr>
       <tr><td class="px" style="padding:20px 34px 4px;font-size:13px;color:#3C4138;">

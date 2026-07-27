@@ -1,11 +1,12 @@
-import { mkdir, writeFile, readFile } from "fs/promises";
-import path from "path";
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { mkdir, unlink, writeFile, readFile } from "fs/promises";
+import path from "path";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 
@@ -58,7 +59,11 @@ export function resumeObjectKey(applicationId: string, originalName: string) {
 }
 
 export function isR2ObjectKey(value: string) {
-  return value.startsWith("videos/") || value.startsWith("resumes/");
+  return (
+    value.startsWith("videos/") ||
+    value.startsWith("resumes/") ||
+    value.startsWith("logos/")
+  );
 }
 
 export function isLegacyMediaUrl(value: string) {
@@ -160,4 +165,59 @@ export async function saveResume(
   const filePath = path.join(UPLOAD_DIR, fileName);
   await writeFile(filePath, buffer);
   return `/api/media/${fileName}`;
+}
+
+export function logoObjectKey(workspaceId: string, originalName: string) {
+  const ext = path.extname(originalName).slice(0, 8).toLowerCase() || ".png";
+  return `logos/${workspaceId}${ext}`;
+}
+
+function logoContentType(fileName: string) {
+  const ext = path.extname(fileName).toLowerCase();
+  if (ext === ".png") return "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".svg") return "image/svg+xml";
+  return "application/octet-stream";
+}
+
+export async function saveLogo(
+  workspaceId: string,
+  originalName: string,
+  buffer: Buffer,
+): Promise<string> {
+  if (isR2Storage()) {
+    const objectKey = logoObjectKey(workspaceId, originalName);
+    await putObject(objectKey, buffer, logoContentType(originalName));
+    return objectKey;
+  }
+
+  const objectKey = logoObjectKey(workspaceId, originalName);
+  const fileName = objectKey.replace(/\//g, "-");
+  await ensureUploadDir();
+  await writeFile(path.join(UPLOAD_DIR, fileName), buffer);
+  return `/api/media/${fileName}`;
+}
+
+export async function deleteStoredMedia(storedValue: string | null | undefined) {
+  if (!storedValue) return;
+
+  if (isR2ObjectKey(storedValue) && isR2Storage()) {
+    await getS3Client().send(
+      new DeleteObjectCommand({
+        Bucket: bucketName(),
+        Key: storedValue,
+      }),
+    );
+    return;
+  }
+
+  if (isLegacyMediaUrl(storedValue)) {
+    const fileName = storedValue.replace("/api/media/", "");
+    try {
+      await unlink(path.join(UPLOAD_DIR, fileName));
+    } catch {
+      /* already gone */
+    }
+  }
 }

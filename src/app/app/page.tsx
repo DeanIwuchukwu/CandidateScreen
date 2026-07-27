@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   ResponseProgress,
-  SearchField,
   StatusPill,
   VideoThumb,
 } from "@/components/recruiter/recruiter-ui";
@@ -86,15 +85,12 @@ export default async function DashboardPage() {
             You have {waiting} responses waiting for review
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <SearchField placeholder="Search candidates" className="max-w-none" />
-          <Link href="/app/interviews/new">
-            <Button size="sm">
-              <Plus size={16} />
-              New interview
-            </Button>
-          </Link>
-        </div>
+        <Link href="/app/interviews/new">
+          <Button size="sm">
+            <Plus size={16} />
+            New interview
+          </Button>
+        </Link>
       </header>
 
       <div className="flex flex-col gap-[26px] p-8">

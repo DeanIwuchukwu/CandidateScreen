@@ -9,7 +9,7 @@ import {
   videoObjectKey,
 } from "@/lib/storage";
 import { ensureCandidateResponse, inviteNeedsIdentity } from "@/lib/candidate/invite";
-import { mockTranscript, type CandidatePhase } from "@/lib/types";
+import type { CandidatePhase } from "@/lib/types";
 import {
   isInternalInviteEmail,
   isPreviewInviteEmail,
@@ -82,8 +82,6 @@ async function upsertAnswer(
   questionId: string,
   videoUrl: string,
   durationSec: number,
-  autoTranscripts: boolean,
-  questionText: string,
 ) {
   const existing = await prisma.answer.findUnique({
     where: {
@@ -92,7 +90,6 @@ async function upsertAnswer(
   });
 
   const retakesUsed = existing ? existing.retakesUsed + 1 : 0;
-  const transcript = autoTranscripts ? mockTranscript(questionText) : null;
 
   await prisma.answer.upsert({
     where: {
@@ -104,13 +101,12 @@ async function upsertAnswer(
       videoUrl,
       durationSec,
       retakesUsed,
-      transcript,
+      transcript: null,
     },
     update: {
       videoUrl,
       durationSec,
       retakesUsed,
-      transcript,
     },
   });
 
@@ -255,8 +251,6 @@ export async function completeVideoUpload(
     questionId,
     objectKey,
     durationSec,
-    ctx.invite.interview.autoTranscripts,
-    ctx.question.text,
   );
 }
 
@@ -283,8 +277,6 @@ export async function uploadCandidateAnswer(
     questionId,
     videoUrl,
     durationSec,
-    ctx.invite.interview.autoTranscripts,
-    ctx.question.text,
   );
 }
 

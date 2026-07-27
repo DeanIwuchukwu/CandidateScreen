@@ -14,8 +14,6 @@ type InterviewSettings = {
   welcomeMessage: string | null;
   deadlineDays: number;
   allowRetakes: boolean;
-  autoTranscripts: boolean;
-  requireIdCheck: boolean;
 };
 
 const DEADLINE_OPTIONS = [3, 5, 7, 14, 21, 30];
@@ -34,8 +32,6 @@ export function InterviewSettingsForm({
   jobs: JobRoleOption[];
 }) {
   const [allowRetakes, setAllowRetakes] = useState(interview.allowRetakes);
-  const [autoTranscripts, setAutoTranscripts] = useState(interview.autoTranscripts);
-  const [requireIdCheck, setRequireIdCheck] = useState(interview.requireIdCheck);
 
   const updateWithId = updateInterviewAction.bind(null, interview.id);
 
@@ -84,16 +80,6 @@ export function InterviewSettingsForm({
           <span>Allow retakes</span>
           <ToggleSwitch on={allowRetakes} onChange={setAllowRetakes} />
           <input type="hidden" name="allowRetakes" value={allowRetakes ? "on" : ""} />
-        </div>
-        <div className="flex items-center justify-between text-[13.5px] font-semibold">
-          <span>Auto-generate transcripts</span>
-          <ToggleSwitch on={autoTranscripts} onChange={setAutoTranscripts} />
-          <input type="hidden" name="autoTranscripts" value={autoTranscripts ? "on" : ""} />
-        </div>
-        <div className="flex items-center justify-between text-[13.5px] font-semibold">
-          <span>Require ID check</span>
-          <ToggleSwitch on={requireIdCheck} onChange={setRequireIdCheck} />
-          <input type="hidden" name="requireIdCheck" value={requireIdCheck ? "on" : ""} />
         </div>
       </div>
       <Button type="submit" variant="secondary" className="w-full">

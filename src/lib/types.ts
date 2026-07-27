@@ -22,6 +22,8 @@ export type InvitePayload = {
     allowRetakes: boolean;
     workspaceName: string;
     careersUrl: string | null;
+    accentColor: string;
+    logoUrl: string | null;
   };
   questions: Array<{
     id: string;
@@ -48,7 +50,3 @@ export const RUBRIC_CRITERIA = [
   "Craft & rigor",
   "Collaboration",
 ] as const;
-
-export function mockTranscript(questionText: string) {
-  return `[Auto transcript] Candidate response to: "${questionText.slice(0, 80)}…" — transcript processing complete.`;
-}

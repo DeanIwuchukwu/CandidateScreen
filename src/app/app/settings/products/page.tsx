@@ -53,9 +53,16 @@ export default async function ProductsSettingsPage({
                   <p className="mt-1 text-[13px] leading-relaxed text-muted">
                     {product.description}
                   </p>
+                  {"comingSoon" in product && product.comingSoon && (
+                    <p className="mt-2 text-[12px] font-medium text-faint">
+                      Coming soon.
+                    </p>
+                  )}
                   {enabled && (
                     <p className="mt-2 text-[12px] font-semibold text-primary">
-                      Added · visible in navigation
+                      {"enabledHint" in product && product.enabledHint
+                        ? product.enabledHint
+                        : "Added · visible in navigation"}
                     </p>
                   )}
                 </div>

@@ -6,6 +6,7 @@ import {
   getUserWorkspace,
 } from "@/lib/recruiter/queries";
 import { resolveMediaUrl } from "@/lib/storage";
+import { hasProduct } from "@/lib/workspace/products";
 import { ReviewPanel } from "@/components/recruiter/review-panel";
 import { RUBRIC_CRITERIA } from "@/lib/types";
 
@@ -41,6 +42,7 @@ export default async function ReviewPage({
 
   return (
     <ReviewPanel
+      showTranscripts={hasProduct(workspace.enabledProducts, "transcripts")}
       data={{
         id: response.id,
         overallRating: response.overallRating,

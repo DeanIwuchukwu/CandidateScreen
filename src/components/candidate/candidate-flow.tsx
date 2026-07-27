@@ -271,7 +271,13 @@ function CandidateFlowInner({ data }: Props) {
             Recruiter preview — recordings are not saved
           </p>
         )}
-        <CandidateFlowHeader workspaceName={data.interview.workspaceName} phase={phase} showStepper={false} />
+        <CandidateFlowHeader
+          workspaceName={data.interview.workspaceName}
+          accentColor={data.interview.accentColor}
+          logoUrl={data.interview.logoUrl}
+          phase={phase}
+          showStepper={false}
+        />
         <div className="mx-auto grid max-w-5xl gap-10 px-4 py-10 md:grid-cols-2 md:px-10 md:py-12">
           <div>
             <p className="text-sm font-semibold text-primary">
@@ -345,6 +351,8 @@ function CandidateFlowInner({ data }: Props) {
       <div className="min-h-screen bg-paper">
         <CandidateFlowHeader
           workspaceName={data.interview.workspaceName}
+          accentColor={data.interview.accentColor}
+          logoUrl={data.interview.logoUrl}
           phase={phase}
           showStepper={false}
           onBack={handleBackToIntro}
@@ -405,6 +413,8 @@ function CandidateFlowInner({ data }: Props) {
       <div className="min-h-screen bg-paper">
         <CandidateFlowHeader
           workspaceName={data.interview.workspaceName}
+          accentColor={data.interview.accentColor}
+          logoUrl={data.interview.logoUrl}
           phase={phase}
           onBack={handleBackToIntro}
           backLabel="Overview"
@@ -495,6 +505,8 @@ function CandidateFlowInner({ data }: Props) {
       <div className="min-h-screen bg-paper">
         <CandidateFlowHeader
           workspaceName={data.interview.workspaceName}
+          accentColor={data.interview.accentColor}
+          logoUrl={data.interview.logoUrl}
           phase={phase}
           onBack={handleBackToIntro}
           backLabel="Overview"
@@ -570,6 +582,8 @@ function CandidateFlowInner({ data }: Props) {
       <div className="flex min-h-screen flex-col bg-[#1a211c] text-white">
         <CandidateFlowHeader
           workspaceName={data.interview.workspaceName}
+          accentColor={data.interview.accentColor}
+          logoUrl={data.interview.logoUrl}
           phase={phase}
           onBack={handleBackToIntro}
           backLabel="Overview"
@@ -637,6 +651,8 @@ function CandidateFlowInner({ data }: Props) {
       <div className="min-h-screen bg-paper">
         <CandidateFlowHeader
           workspaceName={data.interview.workspaceName}
+          accentColor={data.interview.accentColor}
+          logoUrl={data.interview.logoUrl}
           phase={phase}
           onBack={handleBackToIntro}
           backLabel="Overview"
@@ -716,7 +732,12 @@ function DoneScreen({ data, questionCount }: { data: InvitePayload; questionCoun
   });
   return (
     <div className="min-h-screen bg-paper">
-      <CandidateFlowHeader workspaceName={data.interview.workspaceName} phase="done" />
+      <CandidateFlowHeader
+        workspaceName={data.interview.workspaceName}
+        accentColor={data.interview.accentColor}
+        logoUrl={data.interview.logoUrl}
+        phase="done"
+      />
       <div className="mx-auto max-w-2xl px-6 py-12 text-center md:py-16">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-primary-tint text-primary">
           <Check size={28} />

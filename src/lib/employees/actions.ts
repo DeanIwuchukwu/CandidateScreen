@@ -8,9 +8,6 @@ import { requireWorkspaceProduct } from "@/lib/workspace/product-actions";
 
 export async function addEmployeeAction(formData: FormData) {
   const membership = await requireWorkspaceProduct("employees");
-  if (membership.role === "VIEWER") {
-    redirect("/app/employees?error=forbidden");
-  }
 
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -42,9 +39,6 @@ export async function addEmployeeAction(formData: FormData) {
 
 export async function removeEmployeeAction(formData: FormData) {
   const membership = await requireWorkspaceProduct("employees");
-  if (membership.role === "VIEWER") {
-    redirect("/app/employees?error=forbidden");
-  }
 
   const employeeId = String(formData.get("employeeId") ?? "");
   if (!employeeId) redirect("/app/employees");

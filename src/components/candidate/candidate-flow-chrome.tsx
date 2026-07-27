@@ -29,12 +29,16 @@ export function CandidateFlowHeader({
   showStepper = true,
   onBack,
   backLabel = "Back",
+  accentColor = "#19211B",
+  logoUrl = null,
 }: {
   workspaceName: string;
   phase: CandidatePhase;
   showStepper?: boolean;
   onBack?: () => void;
   backLabel?: string;
+  accentColor?: string;
+  logoUrl?: string | null;
 }) {
   const active = stepIndex(phase);
 
@@ -61,9 +65,21 @@ export function CandidateFlowHeader({
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-ink text-[11px] font-bold text-white">
-            {workspaceName.charAt(0).toUpperCase()}
-          </span>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-7 w-7 rounded-lg object-cover"
+            />
+          ) : (
+            <span
+              className="grid h-7 w-7 place-items-center rounded-lg text-[11px] font-bold text-white"
+              style={{ backgroundColor: accentColor }}
+            >
+              {workspaceName.charAt(0).toUpperCase()}
+            </span>
+          )}
           <span className="hidden font-semibold sm:inline">{workspaceName}</span>
         </div>
       </div>

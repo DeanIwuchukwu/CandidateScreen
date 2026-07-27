@@ -19,13 +19,11 @@ export default async function SettingsTeamPage() {
       </div>
 
       <div className="px-8 py-[26px]">
-        <div className="mx-auto max-w-3xl">
-          <TeamSection
-            members={roster.members}
-            pendingInvites={roster.pendingInvites}
-            isAdmin={isAdmin(role)}
-          />
-        </div>
+        <TeamSection
+          members={roster.members}
+          pendingInvites={roster.pendingInvites}
+          isAdmin={isAdmin(role)}
+        />
       </div>
     </>
   );

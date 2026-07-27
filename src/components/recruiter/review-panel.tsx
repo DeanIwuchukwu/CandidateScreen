@@ -49,7 +49,13 @@ function firstAnsweredIndex(data: ReviewData) {
   return idx >= 0 ? idx : 0;
 }
 
-export function ReviewPanel({ data }: { data: ReviewData }) {
+export function ReviewPanel({
+  data,
+  showTranscripts = false,
+}: {
+  data: ReviewData;
+  showTranscripts?: boolean;
+}) {
   const [activeQ, setActiveQ] = useState(() => firstAnsweredIndex(data));
   const [overall, setOverall] = useState(data.overallRating ?? 0);
   const [notes, setNotes] = useState(data.notes ?? "");
@@ -213,34 +219,36 @@ export function ReviewPanel({ data }: { data: ReviewData }) {
             })}
           </div>
 
-          <div className="mt-[22px] border-t border-hairline-3 pt-[18px]">
-            <div className="mb-3 flex items-center justify-between">
-              <SectionLabel>Transcript</SectionLabel>
-              {hasTranscript ? (
-                <button
-                  type="button"
-                  onClick={() => copyTranscript()}
-                  className="text-xs font-semibold text-primary"
-                >
-                  Auto-generated · Copy
-                </button>
-              ) : null}
-            </div>
-            {hasTranscript ? (
-              <div className="flex flex-col gap-2.5 text-sm leading-relaxed text-[#4A4F45]">
-                <div className="flex gap-3.5">
-                  <span className="shrink-0 pt-0.5 text-xs font-semibold tabular-nums text-[#9CB6A6]">
-                    —
-                  </span>
-                  <span>{answer!.transcript}</span>
-                </div>
+          {showTranscripts && (
+            <div className="mt-[22px] border-t border-hairline-3 pt-[18px]">
+              <div className="mb-3 flex items-center justify-between">
+                <SectionLabel>Transcript</SectionLabel>
+                {hasTranscript ? (
+                  <button
+                    type="button"
+                    onClick={() => copyTranscript()}
+                    className="text-xs font-semibold text-primary"
+                  >
+                    Auto-generated · Copy
+                  </button>
+                ) : null}
               </div>
-            ) : (
-              <p className="text-sm text-faint">
-                No transcript for this question yet.
-              </p>
-            )}
-          </div>
+              {hasTranscript ? (
+                <div className="flex flex-col gap-2.5 text-sm leading-relaxed text-[#4A4F45]">
+                  <div className="flex gap-3.5">
+                    <span className="shrink-0 pt-0.5 text-xs font-semibold tabular-nums text-[#9CB6A6]">
+                      —
+                    </span>
+                    <span>{answer!.transcript}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-faint">
+                  No transcript for this question yet.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-[22px] bg-paper-2 p-6">

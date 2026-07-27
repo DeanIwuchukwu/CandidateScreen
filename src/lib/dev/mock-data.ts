@@ -69,11 +69,11 @@ export const MOCK_WORKSPACE_MEMBERS = [
     id: "dev-membership-4",
     workspaceId: "dev-workspace",
     userId: "dev-user-4",
-    role: "VIEWER" as const,
+    role: "RECRUITER" as const,
     createdAt: now,
     user: { id: "dev-user-4", email: "jon@northwind.com", name: "Jon Liu", passwordHash: "", createdAt: now, updatedAt: now },
     avatar: { initials: "JL", color: "#8A6F52" },
-    badge: "Viewer",
+    badge: "Recruiter",
     note: "pending",
   },
 ];
@@ -780,6 +780,8 @@ export function mockInvitePayload(token: string): InvitePayload {
       allowRetakes: true,
       workspaceName: "Northwind",
       careersUrl: "https://northwind.example/careers",
+      accentColor: "#1C6B47",
+      logoUrl: null,
     },
     questions: MOCK_QUESTIONS.map((q) => ({
       id: q.id,

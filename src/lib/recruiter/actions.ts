@@ -101,8 +101,6 @@ export async function updateInterviewAction(interviewId: string, formData: FormD
       welcomeMessage: String(formData.get("welcomeMessage") || "") || null,
       deadlineDays: Number(formData.get("deadlineDays") || 7),
       allowRetakes: formData.get("allowRetakes") === "on",
-      autoTranscripts: formData.get("autoTranscripts") === "on",
-      requireIdCheck: formData.get("requireIdCheck") === "on",
     },
   });
 
@@ -345,16 +343,46 @@ export async function updateWorkspaceAction(formData: FormData) {
     redirect("/app/settings?error=forbidden");
   }
 
+  if (isDevBypass()) {
+    redirect("/app/settings?saved=1");
+  }
+
+  const accentColor = String(formData.get("accentColor") || workspace.accentColor);
+  const data: {
+    name: string;
+    careersUrl: string | null;
+    accentColor: string;
+    logoUrl?: string;
+  } = {
+    name: String(formData.get("name") || workspace.name),
+    careersUrl: String(formData.get("careersUrl") || "") || null,
+    accentColor,
+  };
+
+  const logo = formData.get("logo");
+  if (logo instanceof File && logo.size > 0) {
+    const allowed = [
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "image/svg+xml",
+    ];
+    if (!allowed.includes(logo.type) || logo.size > 2 * 1024 * 1024) {
+      redirect("/app/settings?error=logo");
+    }
+    const buffer = Buffer.from(await logo.arrayBuffer());
+    const { saveLogo } = await import("@/lib/storage");
+    data.logoUrl = await saveLogo(workspace.id, logo.name, buffer);
+  }
+
   await prisma.workspace.update({
     where: { id: workspace.id },
-    data: {
-      name: String(formData.get("name") || workspace.name),
-      careersUrl: String(formData.get("careersUrl") || "") || null,
-      accentColor: String(formData.get("accentColor") || workspace.accentColor),
-    },
+    data,
   });
 
   revalidatePath("/app/settings");
+  revalidatePath("/app");
+  redirect("/app/settings?saved=1");
 }
 
 export async function submitContactAction(formData: FormData) {

@@ -17,6 +17,13 @@ export const WORKSPACE_PRODUCTS = [
     description: "Keep a simple roster of people on your team beyond hiring.",
     href: "/app/employees",
   },
+  {
+    id: "transcripts",
+    label: "Transcripts",
+    description: "Read video answers as text on reviews.",
+    comingSoon: true,
+    enabledHint: "Added · shown on candidate reviews",
+  },
 ] as const;
 
 export type WorkspaceProductId = (typeof WORKSPACE_PRODUCTS)[number]["id"];

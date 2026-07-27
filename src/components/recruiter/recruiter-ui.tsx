@@ -295,7 +295,7 @@ const settingsTabs = [
   { label: "Workspace", href: "/app/settings", key: "workspace" },
   { label: "Team", href: "/app/settings/team", key: "team" },
   { label: "Products", href: "/app/settings/products", key: "products" },
-  { label: "Notifications", href: "/app/settings#notifications", key: "notifications" },
+  { label: "Password", href: "/app/settings/password", key: "password" },
   { label: "Billing", href: "/app/settings/billing", key: "billing" },
 ] as const;
 

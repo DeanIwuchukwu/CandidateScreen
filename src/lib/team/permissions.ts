@@ -2,8 +2,7 @@ import type { WorkspaceRole } from "@prisma/client";
 
 export function roleLabel(role: WorkspaceRole) {
   if (role === "ADMIN") return "Admin";
-  if (role === "RECRUITER") return "Recruiter";
-  return "Viewer";
+  return "Recruiter";
 }
 
 export function isAdmin(role: WorkspaceRole) {

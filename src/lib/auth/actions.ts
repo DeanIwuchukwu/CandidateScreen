@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createToken, hashPassword, verifyPassword } from "@/lib/auth/crypto";
-import { createSession, destroySession } from "@/lib/auth/session";
+import { createSession, destroySession, requireSessionUser } from "@/lib/auth/session";
 import { isDevBypass } from "@/lib/dev/bypass";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
 
@@ -189,4 +189,36 @@ export async function completePasswordResetAction(
   await prisma.passwordReset.delete({ where: { id: reset.id } });
 
   redirect("/login?reset=success");
+}
+
+export async function changePasswordAction(formData: FormData): Promise<void> {
+  if (isDevBypass()) {
+    redirect("/app/settings/password?saved=1");
+  }
+
+  const user = await requireSessionUser();
+  const currentPassword = String(formData.get("currentPassword") || "");
+  const parsed = completeResetSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!parsed.success) {
+    redirect("/app/settings/password?error=invalid");
+  }
+  if (parsed.data.password !== parsed.data.confirmPassword) {
+    redirect("/app/settings/password?error=mismatch");
+  }
+
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!dbUser || !verifyPassword(currentPassword, dbUser.passwordHash)) {
+    redirect("/app/settings/password?error=current");
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: hashPassword(parsed.data.password) },
+  });
+
+  redirect("/app/settings/password?saved=1");
 }

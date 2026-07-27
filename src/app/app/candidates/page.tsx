@@ -16,7 +16,6 @@ import {
 } from "@/lib/recruiter/candidate-status";
 import { CandidatesPipelineActions } from "@/components/recruiter/candidates-pipeline-actions";
 import { CandidateListRow } from "@/components/recruiter/candidate-list-row";
-import { Button } from "@/components/ui/button";
 import {
   Breadcrumb,
   CountTabs,
@@ -212,9 +211,16 @@ export default async function CandidatesPage({
           </div>
           {scoped && interviewId && roleTitle && (
             <div className="flex gap-2.5">
-              <Button variant="secondary" size="sm">
+              <a
+                href={`/api/candidates/export?${new URLSearchParams({
+                  interview: interviewId,
+                  ...(stage !== "ALL" ? { stage } : {}),
+                  ...(search ? { q: search } : {}),
+                }).toString()}`}
+                className="inline-flex h-9 items-center justify-center rounded-[9px] border border-[#E0D9C8] bg-surface px-3.5 text-[13px] font-semibold text-ink hover:bg-paper-2"
+              >
                 Export
-              </Button>
+              </a>
               <CandidatesPipelineActions
                 interviewId={interviewId}
                 interviewTitle={roleTitle}

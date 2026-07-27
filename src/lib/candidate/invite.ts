@@ -6,6 +6,7 @@ import {
 } from "@/lib/candidate/internal-invites";
 import { isDevBypass } from "@/lib/dev/bypass";
 import { mockInvitePayload } from "@/lib/dev/mock-data";
+import { resolveMediaUrl } from "@/lib/storage";
 
 /** Personal sessions without an email (typically share-link forks) need About you. */
 export function inviteNeedsIdentity(email: string | null | undefined) {
@@ -38,8 +39,17 @@ export async function getInvitePayload(token: string): Promise<InvitePayload> {
     return emptyPayload(token, "not_found");
   }
 
+  const logoUrl = await resolveMediaUrl(invite.interview.workspace.logoUrl);
+  const inviteWithLogo = {
+    ...invite,
+    interview: {
+      ...invite.interview,
+      workspace: { ...invite.interview.workspace, logoUrl },
+    },
+  };
+
   if (invite.expiresAt && invite.expiresAt < new Date()) {
-    return emptyPayload(token, "expired", invite);
+    return emptyPayload(token, "expired", inviteWithLogo);
   }
 
   // Share template link is never "completed" — each visitor forks their own session
@@ -49,11 +59,11 @@ export async function getInvitePayload(token: string): Promise<InvitePayload> {
     !isShareTemplate &&
     (invite.status === "COMPLETED" || invite.response?.submittedAt)
   ) {
-    return emptyPayload(token, "completed", invite);
+    return emptyPayload(token, "completed", inviteWithLogo);
   }
 
   if (invite.interview.status === "CLOSED") {
-    return emptyPayload(token, "expired", invite);
+    return emptyPayload(token, "expired", inviteWithLogo);
   }
 
   const response = isShareTemplate ? null : invite.response;
@@ -77,6 +87,8 @@ export async function getInvitePayload(token: string): Promise<InvitePayload> {
       allowRetakes: invite.interview.allowRetakes,
       workspaceName: invite.interview.workspace.name,
       careersUrl: invite.interview.workspace.careersUrl,
+      accentColor: invite.interview.workspace.accentColor,
+      logoUrl,
     },
     questions: invite.interview.questions.map((q) => ({
       id: q.id,
@@ -113,7 +125,12 @@ function emptyPayload(
       title: string;
       welcomeMessage: string | null;
       allowRetakes: boolean;
-      workspace: { name: string; careersUrl: string | null };
+      workspace: {
+        name: string;
+        careersUrl: string | null;
+        accentColor: string;
+        logoUrl: string | null;
+      };
       owner: { name: string };
       questions: Array<{
         id: string;
@@ -141,6 +158,8 @@ function emptyPayload(
       allowRetakes: invite?.interview.allowRetakes ?? true,
       workspaceName: invite?.interview.workspace.name ?? "Company",
       careersUrl: invite?.interview.workspace.careersUrl ?? null,
+      accentColor: invite?.interview.workspace.accentColor ?? "#1C6B47",
+      logoUrl: invite?.interview.workspace.logoUrl ?? null,
     },
     questions:
       invite?.interview.questions.map((q) => ({
